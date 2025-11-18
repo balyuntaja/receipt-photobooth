@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
-import { Printer, Download, RotateCcw, Loader2 } from "lucide-react";
+import { Printer, Download, RotateCcw, Loader2, Upload, Check } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { PRINT_DIMENSIONS } from "@/lib/templates";
 import { templates } from "@/lib/templates";
@@ -9,6 +9,7 @@ import { DELAYS } from "@/lib/constants";
 import { PRINT_CONFIG } from "@/lib/templates";
 import { mergePhotoWithTemplate } from "@/lib/image-processing";
 import { calculatePhotoPosition } from "@/lib/utils";
+import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import PageLayout from "./common/PageLayout";
 import PhotoEditor from "./common/PhotoEditor";
 import logo from "@/assets/logo-photomate.png";
@@ -16,11 +17,17 @@ import logo from "@/assets/logo-photomate.png";
 export default function PreviewPrint() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { templateId, mergedImage, downloadUrl, selectedPhoto } = location.state || {};
+  const { templateId, mergedImage, downloadUrl, selectedPhoto, photos, isMirrored } = location.state || {};
   const containerRef = useRef(null);
 
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState(null);
+  const [isUploaded, setIsUploaded] = useState(false);
+  
+  const {
+    sessionId,
+    resetSession,
+  } = usePhotoUpload();
 
   useEffect(() => {
     if (!mergedImage || !downloadUrl || !templateId) {
@@ -109,8 +116,19 @@ export default function PreviewPrint() {
     }
   };
 
-  // Dummy QR Code value (will be replaced with Firebase integration later)
-  const dummyQRValue = "https://example.com/photostrip-dummy";
+  // Generate QR Code URL with sessionId
+  const qrCodeUrl = sessionId 
+    ? `${window.location.origin}/photo-result?sessionId=${sessionId}`
+    : "https://example.com/photostrip-dummy";
+
+  // Check upload status on mount (upload is done in PhotoSelection)
+  useEffect(() => {
+    const uploaded = sessionStorage.getItem(`uploaded_${sessionId}`);
+    if (uploaded === "true") {
+      setIsUploaded(true);
+    }
+  }, [sessionId]);
+
 
   const downloadCanvas = (canvas) => {
     canvas.toBlob((blob) => {
@@ -144,6 +162,7 @@ export default function PreviewPrint() {
           scale: 1,
           offsetX: 0,
           offsetY: 0,
+          mirror: isMirrored,
         },
       });
 
@@ -174,11 +193,41 @@ export default function PreviewPrint() {
   };
 
   const handleNewSession = () => {
+    // Reset sessionId for new session
+    resetSession();
+    // Clear upload status for old session
+    if (sessionId) {
+      sessionStorage.removeItem(`uploaded_${sessionId}`);
+    }
+    // Navigate to home
     navigate("/");
   };
 
-  if (!mergedImage || !downloadUrl || !templateId || !template) {
-    return null;
+  // Show loading or error state instead of returning null
+  if (!templateId || !template) {
+    return (
+      <PageLayout containerRef={containerRef}>
+        <div className="container mx-auto max-w-6xl text-center py-20">
+          <p className="text-white text-lg">Loading...</p>
+          <Button onClick={() => navigate("/templates")} className="mt-4">
+            Back to Templates
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!mergedImage) {
+    return (
+      <PageLayout containerRef={containerRef}>
+        <div className="container mx-auto max-w-6xl text-center py-20">
+          <p className="text-white text-lg mb-4">No merged image found</p>
+          <Button onClick={() => navigate("/select-photo", { state: { templateId, photos } })} className="mt-4">
+            Back to Photo Selection
+          </Button>
+        </div>
+      </PageLayout>
+    );
   }
 
   return (
@@ -209,6 +258,7 @@ export default function PreviewPrint() {
                   initialScale={1}
                   initialX={0}
                   initialY={0}
+                  mirror={isMirrored}
                 />
               ) : (
                 <div className="relative bg-primary/80 border-2 border-transparent rounded-2xl shadow-lg overflow-hidden">
@@ -230,25 +280,35 @@ export default function PreviewPrint() {
                 </div>
               )}
 
+              {/* Upload Status */}
+              {isUploaded && (
+                <div className="bg-green-500/20 border border-green-500 text-green-200 p-3 rounded-lg text-sm flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  Photos and GIF sudah di-upload! Scan QR code untuk melihat hasil.
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex gap-4">
-                <Button onClick={handlePrint} disabled={isPrinting} className="flex-1" size="lg">
-                  {isPrinting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Mencetak...
-                    </>
-                  ) : (
-                    <>
-                      <Printer className="mr-2 h-4 w-4" />
-                      Print
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" onClick={handleDownload} className="flex-1" size="lg">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-4">
+                  <Button onClick={handlePrint} disabled={isPrinting} className="flex-1" size="lg">
+                    {isPrinting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Mencetak...
+                      </>
+                    ) : (
+                      <>
+                        <Printer className="mr-2 h-4 w-4" />
+                        Print
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={handleDownload} className="flex-1" size="lg">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -262,15 +322,20 @@ export default function PreviewPrint() {
               </p>
               <div className="bg-white p-4 rounded-lg border-2 border-primary/20">
                 <QRCodeSVG 
-                  value={dummyQRValue} 
+                  value={qrCodeUrl} 
                   size={250} 
                   level="H" 
                   includeMargin={true} 
                 />
               </div>
               <p className="text-xs text-white/70 mt-4 text-center max-w-xs">
-                Scan QR Code untuk mendapatkan foto digital (tidak perlu internet)
+                Scan QR Code untuk mendapatkan foto digital
               </p>
+              {sessionId && (
+                <p className="text-xs text-white/50 mt-2 text-center max-w-xs font-mono">
+                  Session: {sessionId.substring(0, 20)}
+                </p>
+              )}
             </div>
 
             <Button variant="outline" onClick={handleNewSession} className="w-full" size="lg">

@@ -15,18 +15,25 @@ export default function PhotoEditor({
   initialX = 0,
   initialY = 0,
   className = "",
+  mirror = false,
 }) {
   const canvasRef = useRef(null);
   const templateImgRef = useRef(null);
   const photoImgRef = useRef(null);
   const photoAreaRef = useRef(photoArea);
   const templateDimensionsRef = useRef(templateDimensions);
+  const mirrorRef = useRef(mirror);
 
   // Update refs when props change
   useEffect(() => {
     photoAreaRef.current = photoArea;
     templateDimensionsRef.current = templateDimensions;
   }, [photoArea, templateDimensions]);
+
+  useEffect(() => {
+    mirrorRef.current = mirror;
+    drawToCanvas();
+  }, [mirror]);
 
   // Draw to canvas function - defined before useEffect that uses it
   const drawToCanvas = () => {
@@ -108,14 +115,32 @@ export default function PhotoEditor({
     
     // Draw photo inside the clipped area
     if (photoImg.complete && photoImg.naturalWidth > 0 && photoImg.naturalHeight > 0) {
-      ctx.drawImage(
-        photoImg,
-        0, 0, photoImg.naturalWidth, photoImg.naturalHeight,
-        Math.round(photoX),
-        Math.round(photoY),
-        Math.round(scaledPhotoWidth),
-        Math.round(scaledPhotoHeight)
-      );
+      if (mirrorRef.current) {
+        ctx.save();
+        ctx.translate(
+          Math.round(photoX) + Math.round(scaledPhotoWidth),
+          Math.round(photoY)
+        );
+        ctx.scale(-1, 1);
+        ctx.drawImage(
+          photoImg,
+          0, 0, photoImg.naturalWidth, photoImg.naturalHeight,
+          0,
+          0,
+          Math.round(scaledPhotoWidth),
+          Math.round(scaledPhotoHeight)
+        );
+        ctx.restore();
+      } else {
+        ctx.drawImage(
+          photoImg,
+          0, 0, photoImg.naturalWidth, photoImg.naturalHeight,
+          Math.round(photoX),
+          Math.round(photoY),
+          Math.round(scaledPhotoWidth),
+          Math.round(scaledPhotoHeight)
+        );
+      }
     }
 
     ctx.restore();

@@ -6,6 +6,7 @@ import TemplateSelection from "./components/TemplateSelection";
 import CameraSession from "./components/CameraSession";
 import PhotoSelection from "./components/PhotoSelection";
 import PreviewPrint from "./components/PreviewPrint";
+import PhotoResultPage from "./components/PhotoResultPage";
 import { initializeTemplatePhotoAreas } from "./lib/templates";
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/camera" element={<CameraSession />} />
           <Route path="/select-photo" element={<PhotoSelection />} />
           <Route path="/preview-print" element={<PreviewPrint />} />
+          <Route path="/photo-result" element={<PhotoResultPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
