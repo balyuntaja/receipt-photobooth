@@ -115,6 +115,10 @@ export default function PhotoEditor({
     
     // Draw photo inside the clipped area
     if (photoImg.complete && photoImg.naturalWidth > 0 && photoImg.naturalHeight > 0) {
+      // Apply grayscale filter to photo before drawing
+      ctx.save();
+      ctx.filter = "grayscale(100%)";
+      
       if (mirrorRef.current) {
         ctx.save();
         ctx.translate(
@@ -141,6 +145,8 @@ export default function PhotoEditor({
           Math.round(scaledPhotoHeight)
         );
       }
+      
+      ctx.restore(); // Restore filter
     }
 
     ctx.restore();
@@ -151,6 +157,26 @@ export default function PhotoEditor({
     if (templateImg.complete && templateImg.naturalWidth > 0 && templateImg.naturalHeight > 0) {
       ctx.drawImage(templateImg, 0, 0);
     }
+
+    // STEP 3: Apply grain effect (5%) to the entire canvas
+    // Get image data and add noise
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const noiseRange = 255 * 0.05; // 5% grain intensity
+    
+    for (let i = 0; i < data.length; i += 4) {
+      // Generate random noise between -noiseRange/2 and +noiseRange/2
+      const noise = (Math.random() - 0.5) * noiseRange;
+      
+      // Apply noise to each RGB channel
+      data[i] = Math.max(0, Math.min(255, data[i] + noise));     // Red
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise)); // Green
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise)); // Blue
+      // Alpha channel (data[i + 3]) remains unchanged
+    }
+    
+    // Put the modified image data back
+    ctx.putImageData(imageData, 0, 0);
 
     // Notify parent that photo is displayed (for merging)
     // Only notify once when canvas is drawn, not on every render

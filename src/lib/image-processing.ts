@@ -1,5 +1,128 @@
 // Image processing utilities for merging photos with templates
 
+/**
+ * Apply grain (noise) effect to an image
+ * @param imageDataUrl - Data URL of the image
+ * @param intensity - Grain intensity (0-1), default 0.05 (5%)
+ * @returns Data URL of the image with grain effect
+ */
+export async function applyGrainFilter(imageDataUrl: string, intensity: number = 0.05): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+      
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw the image
+      ctx.drawImage(img, 0, 0);
+      
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Apply grain effect by adding random noise
+      // Intensity of 0.05 means 5% of the pixel value range (0-255) = ~12.75
+      const noiseRange = 255 * intensity;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        // Generate random noise between -noiseRange/2 and +noiseRange/2
+        const noise = (Math.random() - 0.5) * noiseRange;
+        
+        // Apply noise to each RGB channel
+        data[i] = Math.max(0, Math.min(255, data[i] + noise));     // Red
+        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise)); // Green
+        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise)); // Blue
+        // Alpha channel (data[i + 3]) remains unchanged
+      }
+      
+      // Put the modified image data back
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Convert to data URL
+      const result = canvas.toDataURL("image/png", 1.0);
+      resolve(result);
+    };
+    
+    img.onerror = () => {
+      reject(new Error("Failed to load image for grain conversion"));
+    };
+    
+    img.src = imageDataUrl;
+  });
+}
+
+/**
+ * Apply grayscale (black and white) filter to an image
+ * @param imageDataUrl - Data URL of the image
+ * @returns Data URL of the grayscale image
+ */
+export async function applyGrayscaleFilter(imageDataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+      
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw the image
+      ctx.drawImage(img, 0, 0);
+      
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Apply grayscale filter
+      // Using luminance formula: 0.299*R + 0.587*G + 0.114*B
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        // Calculate grayscale value
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        // Set RGB to grayscale value
+        data[i] = gray;     // Red
+        data[i + 1] = gray; // Green
+        data[i + 2] = gray; // Blue
+        // Alpha channel (data[i + 3]) remains unchanged
+      }
+      
+      // Put the modified image data back
+      ctx.putImageData(imageData, 0, 0);
+      
+      // Convert to data URL
+      const result = canvas.toDataURL("image/png", 1.0);
+      resolve(result);
+    };
+    
+    img.onerror = () => {
+      reject(new Error("Failed to load image for grayscale conversion"));
+    };
+    
+    img.src = imageDataUrl;
+  });
+}
+
 export interface MergeOptions {
   templateImageUrl: string;
   photoImageUrl: string;
@@ -211,8 +334,22 @@ export async function mergePhotoWithTemplate(
 
           // Convert to data URL (format: PNG to preserve transparency)
           // PNG is important here to preserve template's transparent areas
-          const result = canvas.toDataURL("image/png", 1.0);
-          resolve(result);
+          const mergedDataUrl = canvas.toDataURL("image/png", 1.0);
+          
+          // Apply grayscale filter first, then grain effect
+          applyGrayscaleFilter(mergedDataUrl)
+            .then((grayscaleResult) => {
+              // Apply grain effect (5%) after grayscale
+              return applyGrainFilter(grayscaleResult, 0.05);
+            })
+            .then((finalResult) => {
+              resolve(finalResult);
+            })
+            .catch((error) => {
+              console.error("Error applying filters:", error);
+              // If filters fail, return original merged image
+              resolve(mergedDataUrl);
+            });
           return;
         }
         
@@ -251,8 +388,22 @@ export async function mergePhotoWithTemplate(
         ctx.drawImage(templateImg, 0, 0);
 
         // Convert to data URL (format: PNG to preserve transparency)
-        const result = canvas.toDataURL("image/png", 1.0);
-        resolve(result);
+        const mergedDataUrl = canvas.toDataURL("image/png", 1.0);
+        
+        // Apply grayscale filter first, then grain effect
+        applyGrayscaleFilter(mergedDataUrl)
+          .then((grayscaleResult) => {
+            // Apply grain effect (5%) after grayscale
+            return applyGrainFilter(grayscaleResult, 0.05);
+          })
+          .then((finalResult) => {
+            resolve(finalResult);
+          })
+          .catch((error) => {
+            console.error("Error applying filters:", error);
+            // If filters fail, return original merged image
+            resolve(mergedDataUrl);
+          });
       };
 
       photoImg.onerror = () => {
