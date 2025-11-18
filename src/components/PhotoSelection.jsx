@@ -6,6 +6,9 @@ import { templates } from "@/lib/templates";
 import { mergePhotoWithTemplate } from "@/lib/image-processing";
 import { calculatePhotoPosition } from "@/lib/utils";
 import { PRINT_CONFIG } from "@/lib/templates";
+import { COLORS } from "@/lib/constants";
+import { usePhotoUpload } from "@/hooks/usePhotoUpload";
+import { dataURLtoFile } from "@/lib/api";
 import PageLayout from "./common/PageLayout";
 import PhotoGrid from "./common/PhotoGrid";
 import PhotoEditor from "./common/PhotoEditor";
@@ -22,13 +25,22 @@ export default function PhotoSelection() {
   const [downloadUrl, setDownloadUrl] = useState(null);
   const mergeTimeoutRef = useRef(null);
   const isMergingRef = useRef(false);
-  
+  const [isUploading, setIsUploading] = useState(false);
+  const [isMirrored, setIsMirrored] = useState(false);
+
   // Photo editor state (position and scale)
   const [photoTransform, setPhotoTransform] = useState({
     scale: 1,
     offsetX: 0,
     offsetY: 0,
   });
+
+  // Upload hook
+  const {
+    sessionId,
+    uploadFilesDirect,
+    uploadError,
+  } = usePhotoUpload();
 
   useEffect(() => {
     if (!templateId || !photos || photos.length === 0) {
@@ -54,8 +66,10 @@ export default function PhotoSelection() {
     setIsMerging(true);
     
     try {
+      // Use previewArea for preview consistency (same as PhotoEditor)
+      const photoArea = template.previewArea || template.photoArea;
       const photoPosition = calculatePhotoPosition(
-        template.photoArea,
+        photoArea,
         PRINT_CONFIG.DPI,
         PRINT_CONFIG.INCH_TO_CM
       );
@@ -64,6 +78,7 @@ export default function PhotoSelection() {
         templateId,
         photoUrl: photoUrl.substring(0, 50) + "...",
         photoPosition,
+        photoArea: photoArea,
         templateDimensions: template.dimensions,
         transform
       });
@@ -73,7 +88,7 @@ export default function PhotoSelection() {
         photoImageUrl: photoUrl,
         templateDimensions: template.dimensions,
         photoPosition,
-        photoTransform: transform,
+        photoTransform: { ...transform, mirror: isMirrored },
       });
 
       if (!merged) {
@@ -102,7 +117,7 @@ export default function PhotoSelection() {
       setIsMerging(false);
       isMergingRef.current = false;
     }
-  }, [templateId, template, downloadUrl]);
+  }, [templateId, template, downloadUrl, isMirrored]);
 
   const handlePhotoSelect = async (index) => {
     console.log("handlePhotoSelect called with index:", index);
@@ -111,6 +126,7 @@ export default function PhotoSelection() {
     // Reset transform when selecting new photo
     const resetTransform = { scale: 1, offsetX: 0, offsetY: 0 };
     setPhotoTransform(resetTransform);
+    setIsMirrored(false);
     
     // Clear any pending merges
     if (mergeTimeoutRef.current) {
@@ -168,6 +184,13 @@ export default function PhotoSelection() {
       }, 800); // Longer delay to wait for user to finish
     }
   }, [selectedPhoto, mergePhotoWithTransform, photoTransform]);
+  useEffect(() => {
+    if (selectedPhoto) {
+      mergePhotoWithTransform(selectedPhoto, photoTransform);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMirrored]);
+
 
   // Cleanup timeout and URLs on unmount
   useEffect(() => {
@@ -181,10 +204,50 @@ export default function PhotoSelection() {
     };
   }, [downloadUrl]);
 
-  const handleNext = () => {
-    if (mergedImage && downloadUrl && selectedPhoto) {
+
+  const handleNext = async () => {
+    if (!mergedImage || !downloadUrl || selectedPhotoIndex === null) {
+      return;
+    }
+
+    // Prepare files for upload (photostrip + ordered photos)
+    const orderedPhotos = photos && photos.length > 0
+      ? [photos[selectedPhotoIndex], ...photos.filter((_, idx) => idx !== selectedPhotoIndex)]
+      : [];
+
+    setIsUploading(true);
+
+    try {
+      const filesToUpload = [];
+
+      // Photostrip as the first file
+      const photostripFile = dataURLtoFile(mergedImage, `photostrip-${sessionId}.png`);
+      filesToUpload.push(photostripFile);
+
+      // Original photos (selected first, then the rest) so backend receives consistent order
+      orderedPhotos.forEach((photoDataUrl, index) => {
+        const photoFile = dataURLtoFile(photoDataUrl, `photo-${index + 1}.png`);
+        filesToUpload.push(photoFile);
+      });
+
+      if (filesToUpload.length > 0) {
+        console.log("Uploading files before preview:", filesToUpload.map(f => ({ name: f.name, type: f.type, size: f.size })));
+        const result = await uploadFilesDirect(filesToUpload);
+        if (result && result.success) {
+          sessionStorage.setItem(`uploaded_${sessionId}`, "true");
+          console.log("Upload successful. Backend will generate GIF from uploaded photos.");
+        } else {
+          console.warn("Upload failed before preview:", result?.message);
+        }
+      }
+    } catch (error) {
+      console.error("Upload error before preview:", error);
+    } finally {
+      setIsUploading(false);
+
+      // Navigate to preview regardless of upload result
       navigate("/preview-print", {
-        state: { templateId, mergedImage, downloadUrl, selectedPhoto },
+        state: { templateId, mergedImage, downloadUrl, selectedPhoto, photos, isMirrored },
       });
     }
   };
@@ -252,16 +315,50 @@ export default function PhotoSelection() {
                   initialScale={1}
                   initialX={0}
                   initialY={0}
+                  mirror={isMirrored}
                 />
 
+                {isUploading && (
+                  <div className="bg-blue-500/20 border border-blue-500 text-blue-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Mengupload ke cloud...
+                  </div>
+                )}
+
+                <div className="flex items-center justify-center gap-3 text-white/80">
+                  <button
+                    type="button"
+                    onClick={() => setIsMirrored((prev) => !prev)}
+                    className="relative inline-flex h-8 w-16 items-center rounded-full border border-white/20 transition-colors duration-300"
+                    style={{ backgroundColor: isMirrored ? COLORS.PRIMARY : 'rgba(255,255,255,0.25)' }}
+                  >
+                    <span className="sr-only">Mirror image</span>
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300 ${
+                        isMirrored ? 'translate-x-8' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-xs font-semibold uppercase tracking-wide">Mirror image</span>
+                </div>
+                
                 <Button 
                   onClick={handleNext} 
                   className="w-full" 
                   size="lg" 
-                  disabled={!mergedImage || isMerging}
+                  disabled={!mergedImage || isMerging || isUploading}
                 >
-                  {isMerging ? "Menggabungkan..." : mergedImage ? "Lanjut ke Print" : "Menunggu..."}
+                  {isMerging ? (
+                    "Menggabungkan..."
+                  ) : mergedImage ? (
+                    "Lanjut ke Print"
+                  ) : (
+                    "Menunggu..."
+                  )}
                 </Button>
+                {uploadError && (
+                  <p className="text-red-400 text-sm mt-2">{uploadError}</p>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center h-96 bg-primary/80 border-2 border-transparent rounded-2xl shadow-lg">

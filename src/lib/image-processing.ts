@@ -17,6 +17,7 @@ export interface MergeOptions {
     scale?: number;
     offsetX?: number;
     offsetY?: number;
+    mirror?: boolean;
   };
 }
 
@@ -167,17 +168,38 @@ export async function mergePhotoWithTemplate(
           
           // Draw photo INSIDE the clipped area ONLY
           // Photo will respect user transform (scale and position)
-          ctx.drawImage(
-            photoImg,
-            0,                       // Source X (full photo, no cropping)
-            0,                       // Source Y (full photo, no cropping)
-            photoImg.width,         // Source width (full photo width)
-            photoImg.height,        // Source height (full photo height)
-            Math.round(photoX),     // Destination X (with user offset)
-            Math.round(photoY),     // Destination Y (with user offset)
-            Math.round(scaledPhotoWidth),   // Destination width (with user scale)
-            Math.round(scaledPhotoHeight)  // Destination height (with user scale)
-          );
+          if (transform.mirror) {
+            ctx.save();
+            ctx.translate(
+              Math.round(photoX) + Math.round(scaledPhotoWidth),
+              Math.round(photoY)
+            );
+            ctx.scale(-1, 1);
+            ctx.drawImage(
+              photoImg,
+              0,
+              0,
+              photoImg.width,
+              photoImg.height,
+              0,
+              0,
+              Math.round(scaledPhotoWidth),
+              Math.round(scaledPhotoHeight)
+            );
+            ctx.restore();
+          } else {
+            ctx.drawImage(
+              photoImg,
+              0,                       // Source X (full photo, no cropping)
+              0,                       // Source Y (full photo, no cropping)
+              photoImg.width,         // Source width (full photo width)
+              photoImg.height,        // Source height (full photo height)
+              Math.round(photoX),     // Destination X (with user offset)
+              Math.round(photoY),     // Destination Y (with user offset)
+              Math.round(scaledPhotoWidth),   // Destination width (with user scale)
+              Math.round(scaledPhotoHeight)  // Destination height (with user scale)
+            );
+          }
           
           // Restore context - remove clipping region
           ctx.restore();
