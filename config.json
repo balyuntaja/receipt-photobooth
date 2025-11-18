@@ -1,7 +1,5 @@
 {
-  "api": {
-    "baseUrl": "https://photobooth-backend-beta.vercel.app",
-    "timeout": 30000
-  }
+  "apiBaseUrl": "http://localhost:3000",
+  "apiKey": "ac89cefb7d385811283fa978c241b8c4ec3a0def07d8807318e1fcaab1fbef33"
 }
 

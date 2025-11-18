@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { generateSessionId } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 import { templates as importedTemplates, PRINT_DIMENSIONS } from "@/lib/templates";
@@ -37,6 +38,14 @@ export default function TemplateSelection() {
   const navigate = useNavigate();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const containerRef = useRef(null);
+
+  // Generate new sessionId when user selects a template (starts new photo session)
+  useEffect(() => {
+    // Only reset if user is coming from home (not from back button)
+    const newSessionId = generateSessionId();
+    sessionStorage.setItem("photobooth_sessionId", newSessionId);
+    console.log("New photo session started:", newSessionId);
+  }, []);
 
   const handleNext = () => {
     if (selectedTemplate) {
