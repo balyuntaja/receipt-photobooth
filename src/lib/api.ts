@@ -6,7 +6,7 @@
 
 import appConfig from "../../config.json";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || appConfig.apiBaseUrl || "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || appConfig.apiBaseUrl || "https://photobooth-backend-beta.vercel.app";
 const API_KEY = import.meta.env.VITE_API_KEY || appConfig.apiKey || "ac89cefb7d385811283fa978c241b8c4ec3a0def07d8807318e1fcaab1fbef33";
 const API_TIMEOUT = 30000;
 
