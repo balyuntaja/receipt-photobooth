@@ -102,10 +102,36 @@ export async function uploadFiles(
     return data;
   } catch (error) {
     console.error("Upload error:", error);
+    
+    // Check for CORS error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isCorsError = errorMessage.includes('CORS') || 
+                       errorMessage.includes('Access-Control') ||
+                       (error instanceof TypeError && (
+                         errorMessage.includes('Failed to fetch') ||
+                         errorMessage.includes('NetworkError') ||
+                         errorMessage.includes('Network request failed')
+                       ));
+    
+    if (isCorsError) {
+      const corsError = `CORS Error: Backend di ${API_BASE_URL} tidak mengizinkan request dari origin ini. 
+      Backend perlu menambahkan CORS headers:
+      - Access-Control-Allow-Origin: https://receiptbooth-photomate.netlify.app (atau *)
+      - Access-Control-Allow-Methods: POST, GET, OPTIONS
+      - Access-Control-Allow-Headers: X-API-Key, Content-Type`;
+      
+      console.error(corsError);
+      return {
+        success: false,
+        sessionId,
+        message: `CORS Error: Backend tidak mengizinkan request dari origin ini. Silakan hubungi backend developer untuk menambahkan CORS headers.`,
+      };
+    }
+    
     return {
       success: false,
       sessionId,
-      message: error instanceof Error ? error.message : "Upload failed",
+      message: errorMessage,
     };
   }
 }
@@ -158,11 +184,38 @@ export async function viewFiles(sessionId: string): Promise<{
     return data;
   } catch (error) {
     console.error("View error:", error);
+    
+    // Check for CORS error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isCorsError = errorMessage.includes('CORS') || 
+                       errorMessage.includes('Access-Control') ||
+                       (error instanceof TypeError && (
+                         errorMessage.includes('Failed to fetch') ||
+                         errorMessage.includes('NetworkError') ||
+                         errorMessage.includes('Network request failed')
+                       ));
+    
+    if (isCorsError) {
+      const corsError = `CORS Error: Backend di ${API_BASE_URL} tidak mengizinkan request dari origin ini. 
+      Backend perlu menambahkan CORS headers:
+      - Access-Control-Allow-Origin: https://receiptbooth-photomate.netlify.app (atau *)
+      - Access-Control-Allow-Methods: GET, POST, OPTIONS
+      - Access-Control-Allow-Headers: X-API-Key, Content-Type`;
+      
+      console.error(corsError);
+      return {
+        success: false,
+        sessionId,
+        files: [],
+        message: `CORS Error: Backend tidak mengizinkan request dari origin ini. Silakan hubungi backend developer untuk menambahkan CORS headers.`,
+      };
+    }
+    
     return {
       success: false,
       sessionId,
       files: [],
-      message: error instanceof Error ? error.message : "Failed to fetch files",
+      message: errorMessage,
     };
   }
 }
