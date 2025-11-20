@@ -23,7 +23,27 @@ export function useCamera(cameraFacingMode = "user") {
       setIsLoading(false);
     } catch (err) {
       console.error("Kamera tidak dapat diakses:", err);
-      setError("Tidak dapat mengakses kamera. Pastikan permission kamera sudah diberikan.");
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = "Tidak dapat mengakses kamera.";
+      
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        errorMessage = "Akses kamera ditolak. Silakan berikan izin kamera di pengaturan browser.";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        errorMessage = "Kamera tidak ditemukan. Pastikan kamera terhubung dan tidak digunakan aplikasi lain.";
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        errorMessage = "Kamera sedang digunakan aplikasi lain atau terjadi masalah pada driver kamera.";
+      } else if (err.name === "OverconstrainedError" || err.name === "ConstraintNotSatisfiedError") {
+        errorMessage = "Kamera tidak mendukung mode yang diminta. Coba gunakan kamera lain.";
+      } else if (err.name === "NotSupportedError") {
+        errorMessage = "Browser tidak mendukung akses kamera. Gunakan browser modern (Chrome, Firefox, Safari, Edge).";
+      } else if (err.name === "SecurityError") {
+        errorMessage = "Akses kamera diblokir. Pastikan menggunakan HTTPS atau localhost.";
+      } else {
+        errorMessage = "Tidak dapat mengakses kamera. Pastikan:\n- Kamera terhubung\n- Permission sudah diberikan\n- Tidak digunakan aplikasi lain\n- Menggunakan HTTPS atau localhost";
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
     }
   };
