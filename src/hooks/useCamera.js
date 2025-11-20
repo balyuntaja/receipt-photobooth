@@ -13,8 +13,17 @@ export function useCamera(cameraFacingMode = "user") {
     try {
       setIsLoading(true);
       setError(null);
+      
+      // Get saved camera deviceId from localStorage
+      const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+      
+      // Build video constraints
+      const videoConstraints = savedDeviceId
+        ? { deviceId: { exact: savedDeviceId } }
+        : { facingMode: cameraFacingMode };
+      
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: cameraFacingMode },
+        video: videoConstraints,
       });
       streamRef.current = stream;
       if (videoRef.current) {

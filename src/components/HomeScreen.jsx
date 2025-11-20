@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { ANIMATION } from "@/lib/constants";
 import { generateSessionId } from "@/lib/api";
+import { Settings } from "lucide-react";
 import PageLayout from "./common/PageLayout";
+import CameraSettingModal from "./CameraSettingModal";
 import background from "@/assets/background.svg";
 import title from "@/assets/title.png";
 import subtitle from "@/assets/subtitle.png";
@@ -11,6 +13,7 @@ import logo from "@/assets/logo-putih.png";
 
 export default function HomeScreen() {
   const navigate = useNavigate();
+  const [showCameraSettings, setShowCameraSettings] = useState(false);
 
   // Reset sessionId when user returns to home (starts new session)
   useEffect(() => {
@@ -30,8 +33,37 @@ export default function HomeScreen() {
     navigate("/templates");
   };
 
+  const handleSettingsClick = () => {
+    setShowCameraSettings(true);
+  };
+
   return (
     <PageLayout backgroundImage={background} className="flex flex-col items-center justify-between relative h-screen">
+      {/* Settings button - only on HomeScreen */}
+      <div className="absolute top-6 right-20 z-10">
+        <button
+          onClick={handleSettingsClick}
+          className="p-2 cursor-pointer hover:opacity-70 transition-opacity outline-none focus:outline-none"
+          style={{ 
+            background: 'transparent', 
+            border: 'none', 
+            boxShadow: 'none',
+            padding: '0.5rem',
+            margin: 0,
+            backgroundColor: 'transparent !important'
+          }}
+          title="Settings"
+        >
+          <Settings className="h-5 w-5 text-gray-500" />
+        </button>
+      </div>
+
+      {/* Camera Settings Modal */}
+      <CameraSettingModal 
+        open={showCameraSettings} 
+        onClose={() => setShowCameraSettings(false)} 
+      />
+
       {/* Logo at top center */}
       <div className="flex justify-center pt-8">
         <img src={logo} alt="Logo" className="h-12 object-contain" />

@@ -2,12 +2,23 @@
 
 export async function requestCameraAccess(): Promise<MediaStream | null> {
   try {
+    // Get saved camera deviceId from localStorage
+    const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+    
+    // Build video constraints
+    const videoConstraints: MediaTrackConstraints = {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    };
+    
+    if (savedDeviceId) {
+      videoConstraints.deviceId = { exact: savedDeviceId };
+    } else {
+      videoConstraints.facingMode = "user"; // Front camera fallback
+    }
+    
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        facingMode: "user", // Front camera
-      },
+      video: videoConstraints,
       audio: false,
     });
     return stream;
