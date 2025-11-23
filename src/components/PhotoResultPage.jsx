@@ -191,20 +191,20 @@ export default function PhotoResultPage() {
   };
 
   return (
-    <PageLayout className="flex flex-col items-center py-6">
-      <div className="container mx-auto max-w-4xl px-4 text-center">
-        <h1 className="text-4xl font-light mb-2 text-white">
+    <PageLayout className="flex flex-col items-center py-4 sm:py-6" showLockButton={false}>
+      <div className="container mx-auto max-w-4xl px-4 sm:px-6 text-center w-full">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-light mb-2 text-white">
           Here comes your <strong>soft files</strong>
         </h1>
 
-        <p className="text-sm mt-3 max-w-xl mx-auto text-white/80">
+        <p className="text-xs sm:text-sm mt-3 max-w-xl mx-auto text-white/80 px-2">
           Terima kasih telah memilih Photomate. Berikut adalah foto-foto yang telah kamu ambil dan edit. Jangan lupa download softfile kamu sebelum masa berlaku habis!
         </p>
 
-        <div className="flex gap-3 justify-center mt-5">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-5 px-2">
           <Button
             onClick={downloadAll}
-            className="px-6 py-2 text-sm"
+            className="w-full sm:w-auto px-6 py-2 text-sm"
             size="lg"
             disabled={isLoading || photos.length === 0}
           >
@@ -214,7 +214,7 @@ export default function PhotoResultPage() {
           <Button
             onClick={handleRefresh}
             variant="outline"
-            className="px-6 py-2 text-sm"
+            className="w-full sm:w-auto px-6 py-2 text-sm"
             size="lg"
             disabled={isLoading || !sessionId}
           >
@@ -229,24 +229,24 @@ export default function PhotoResultPage() {
 
         {/* Error message */}
         {uploadError && (
-          <div className="mt-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-200 text-sm">
+          <div className="mt-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-200 text-xs sm:text-sm mx-2">
             {uploadError}
           </div>
         )}
 
         {/* Loading state */}
         {isLoading && (
-          <div className="mt-10 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
-            <span className="ml-3 text-white">Loading photos...</span>
+          <div className="mt-6 sm:mt-10 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-white" />
+            <span className="ml-3 text-white text-sm sm:text-base">Loading photos...</span>
           </div>
         )}
 
         {/* No photos message */}
         {!isLoading && photos.length === 0 && (
-          <div className="mt-10 p-6 bg-white/10 rounded-lg text-white">
-            <p className="text-lg mb-2">No photos found</p>
-            <p className="text-sm text-white/70">
+          <div className="mt-6 sm:mt-10 p-4 sm:p-6 bg-white/10 rounded-lg text-white mx-2">
+            <p className="text-base sm:text-lg mb-2">No photos found</p>
+            <p className="text-xs sm:text-sm text-white/70">
               {sessionId 
                 ? `No files found for session: ${sessionId}`
                 : "Please provide a sessionId in the URL (e.g., /photo-result?sessionId=abc123)"}
@@ -256,9 +256,9 @@ export default function PhotoResultPage() {
 
         {/* Preview Grid */}
         {photos.length > 0 && (
-          <div className="mt-10 w-full">
-            <h2 className="mb-4 text-lg font-medium text-white">Photo & GIF Preview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="mt-6 sm:mt-10 w-full">
+            <h2 className="mb-3 sm:mb-4 text-base sm:text-lg font-medium text-white px-2">Photo & GIF Preview</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 px-2 sm:px-0">
               {photos.map((url, index) => {
                 const isGif = url.toLowerCase().includes('.gif') || url.includes('data:image/gif') || url.includes('gif');
                 const label = isGif
@@ -288,7 +288,7 @@ export default function PhotoResultPage() {
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:opacity-80"
                     />
 
-                    <span className="absolute left-2 top-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                    <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 sm:px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                       {label}
                     </span>
                   </div>
@@ -300,31 +300,31 @@ export default function PhotoResultPage() {
 
         {activePhoto && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-2 sm:px-4"
             onClick={() => setActivePhotoIndex(null)}
           >
-            <div className="absolute right-6 top-6 flex items-center gap-2">
+            <div className="absolute right-2 top-2 sm:right-6 sm:top-6 flex items-center gap-2">
               <Button
                 size="icon"
                 variant="outline"
-                className="bg-black/60 text-white border-white/30 hover:bg-black/40"
+                className="bg-black/60 text-white border-white/30 hover:bg-black/40 h-8 w-8 sm:h-10 sm:w-10"
                 onClick={(event) => {
                   event.stopPropagation();
                   downloadImage(activePhoto);
                 }}
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
               <Button
                 size="icon"
                 variant="outline"
-                className="bg-black/60 text-white border-white/30 hover:bg-black/40"
+                className="bg-black/60 text-white border-white/30 hover:bg-black/40 h-8 w-8 sm:h-10 sm:w-10"
                 onClick={(event) => {
                   event.stopPropagation();
                   setActivePhotoIndex(null);
                 }}
               >
-                <X className="h-4 w-4" />
+                <X className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
             <div
@@ -334,7 +334,7 @@ export default function PhotoResultPage() {
               <img
                 src={activePhoto}
                 alt="Preview detail"
-                className="w-full max-h-[80vh] rounded-lg object-contain shadow-2xl"
+                className="w-full max-h-[85vh] sm:max-h-[80vh] rounded-lg object-contain shadow-2xl"
               />
             </div>
           </div>

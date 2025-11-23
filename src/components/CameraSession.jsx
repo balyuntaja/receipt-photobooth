@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
-import { ArrowLeft, Camera, RotateCcw } from "lucide-react";
+import { Slider } from "@/components/ui/Slider";
+import { ArrowLeft, Camera, RotateCcw, Minus, Plus } from "lucide-react";
 import { templates } from "@/lib/templates";
 import { CONFIG } from "@/lib/constants";
 import { useCamera } from "@/hooks/useCamera";
@@ -20,10 +21,12 @@ export default function CameraSession() {
   const [cameraFacingMode, setCameraFacingMode] = useState("user");
   const [hasStarted, setHasStarted] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [exposure, setExposure] = useState(50); // 0-100, default 50 (middle)
   const photosRef = useRef([]);
   const captureTimeoutRef = useRef(null);
   const isCapturingRef = useRef(false);
   const isCountdownActiveRef = useRef(false);
+  const videoTrackRef = useRef(null);
 
   // Get template
   const template = templates.find((t) => t.id === templateId);
@@ -32,6 +35,106 @@ export default function CameraSession() {
   const { videoRef, error, startCamera, stopCamera, isLoading } = useCamera(cameraFacingMode);
   const { canvasRef, capturePhoto: capturePhotoFromVideo } = usePhotoCapture();
   const { countdown, startCountdown } = useCountdown(delay);
+
+  // Apply exposure to video track - use useCallback to stabilize function
+  // Must be defined before useEffect that uses it
+  const applyExposureToTrack = useCallback(async (track, value) => {
+    if (!track) return;
+
+    try {
+      // Convert 0-100 to exposure compensation range (-2 to 2)
+      // 0 = -2 (darker), 50 = 0 (normal), 100 = 2 (brighter)
+      const exposureCompensation = ((value - 50) / 50) * 2;
+      
+      // Try multiple approaches for exposure control
+      const constraints = {
+        exposureCompensation: exposureCompensation,
+      };
+
+      // First try: direct exposureCompensation in advanced
+      try {
+        await track.applyConstraints({ advanced: [constraints] });
+        console.log("Exposure applied via advanced constraints:", exposureCompensation);
+        // Don't clear CSS filter - keep it as visual feedback
+        return;
+      } catch (e) {
+        console.log("Advanced constraints failed, trying direct constraint");
+      }
+
+      // Second try: direct constraint (not in advanced array)
+      try {
+        await track.applyConstraints(constraints);
+        console.log("Exposure applied via direct constraint:", exposureCompensation);
+        // Don't clear CSS filter - keep it as visual feedback
+        return;
+      } catch (e) {
+        console.log("Direct constraint failed, trying exposureMode");
+      }
+
+      // Third try: use exposureMode with manual mode
+      try {
+        await track.applyConstraints({
+          exposureMode: "manual",
+          exposureCompensation: exposureCompensation,
+        });
+        console.log("Exposure applied via exposureMode:", exposureCompensation);
+        // Don't clear CSS filter - keep it as visual feedback
+        return;
+      } catch (e) {
+        console.warn("Camera exposure API not supported, using CSS filter only");
+      }
+    } catch (err) {
+      console.warn("Exposure adjustment error:", err);
+    }
+    // Always use CSS filter for visual feedback regardless of API support
+  }, []);
+
+  // Get video track for exposure control
+  useEffect(() => {
+    const updateVideoTrack = () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject;
+        const tracks = stream.getVideoTracks();
+        if (tracks.length > 0) {
+          videoTrackRef.current = tracks[0];
+        }
+      }
+    };
+
+    // Update track when video element or stream changes
+    if (videoRef.current && !isLoading) {
+      updateVideoTrack();
+      // Also listen for loadedmetadata event
+      videoRef.current.addEventListener('loadedmetadata', updateVideoTrack);
+    }
+
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.removeEventListener('loadedmetadata', updateVideoTrack);
+      }
+    };
+  }, [isLoading]);
+
+  // Apply exposure when exposure value changes
+  useEffect(() => {
+    // Always apply CSS filter for immediate visual feedback
+    if (videoRef.current) {
+      // Convert exposure to brightness/contrast
+      // 0 = 0.3 brightness (very dark), 50 = 1.0 brightness (normal), 100 = 2.0 brightness (very bright)
+      const brightness = 0.3 + (exposure / 100) * 1.7;
+      const contrast = 0.7 + (exposure / 100) * 0.6;
+      const filterValue = `brightness(${brightness}) contrast(${contrast})`;
+      videoRef.current.style.filter = filterValue;
+      console.log("CSS filter applied:", filterValue, "exposure:", exposure);
+    }
+    
+    // Also try to apply to camera track if available (non-blocking)
+    if (videoTrackRef.current) {
+      applyExposureToTrack(videoTrackRef.current, exposure).catch(err => {
+        console.warn("Failed to apply exposure to track:", err);
+      });
+    }
+  }, [exposure, applyExposureToTrack]);
 
   // Sync photosRef with photos state
   useEffect(() => {
@@ -80,11 +183,11 @@ export default function CameraSession() {
               return;
             }
 
-            const dataUrl = capturePhotoFromVideo(video);
+            const dataUrl = capturePhotoFromVideo(video, exposure);
             if (dataUrl) {
               setPhotos((prev) => {
                 const newPhotos = [...prev, dataUrl];
-                console.log(`Photo captured. Total photos: ${newPhotos.length}`);
+                console.log(`Photo captured with exposure ${exposure}. Total photos: ${newPhotos.length}`);
                 
                 // Update ref immediately
                 photosRef.current = newPhotos;
@@ -141,11 +244,11 @@ export default function CameraSession() {
       const video = videoRef.current;
       if (!video) return;
 
-      const dataUrl = capturePhotoFromVideo(video);
+      const dataUrl = capturePhotoFromVideo(video, exposure);
       if (dataUrl) {
         setPhotos((prev) => {
           const newPhotos = [...prev, dataUrl];
-          console.log(`Photo captured. Total photos: ${newPhotos.length}`);
+          console.log(`Photo captured with exposure ${exposure}. Total photos: ${newPhotos.length}`);
           return newPhotos;
         });
       }
@@ -197,12 +300,12 @@ export default function CameraSession() {
           return;
         }
 
-        const dataUrl = capturePhotoFromVideo(video);
+        const dataUrl = capturePhotoFromVideo(video, exposure);
         if (dataUrl) {
           setPhotos((prev) => {
             const newPhotos = [...prev];
             newPhotos[index] = dataUrl;
-            console.log(`Photo ${index + 1} retaken`);
+            console.log(`Photo ${index + 1} retaken with exposure ${exposure}`);
             
             // Update ref immediately
             photosRef.current = newPhotos;
@@ -217,6 +320,40 @@ export default function CameraSession() {
       // Mark countdown as inactive after countdown completes
       isCountdownActiveRef.current = false;
     }
+  };
+
+
+  // Handle exposure change
+  const handleExposureChange = (newValue) => {
+    setExposure(newValue);
+    
+    // Immediately apply CSS filter for visual feedback
+    if (videoRef.current) {
+      // Convert exposure to brightness/contrast with more noticeable range
+      // 0 = 0.3 brightness (very dark), 50 = 1.0 brightness (normal), 100 = 2.0 brightness (very bright)
+      const brightness = 0.3 + (newValue / 100) * 1.7;
+      const contrast = 0.7 + (newValue / 100) * 0.6;
+      const filterValue = `brightness(${brightness}) contrast(${contrast})`;
+      videoRef.current.style.filter = filterValue;
+      console.log("Exposure changed - CSS filter:", filterValue, "value:", newValue);
+    }
+    
+    // Also try to apply to camera track if available (async, non-blocking)
+    if (videoTrackRef.current) {
+      applyExposureToTrack(videoTrackRef.current, newValue).catch(err => {
+        console.warn("Failed to apply exposure to track:", err);
+      });
+    }
+  };
+
+  const handleExposureDecrease = () => {
+    const newValue = Math.max(0, exposure - 5);
+    handleExposureChange(newValue);
+  };
+
+  const handleExposureIncrease = () => {
+    const newValue = Math.min(100, exposure + 5);
+    handleExposureChange(newValue);
   };
 
   return (
@@ -244,7 +381,102 @@ export default function CameraSession() {
               className="w-full h-full object-cover rounded-lg"
             />
             <CountdownOverlay countdown={countdown} />
+            
+            {/* Start Overlay - Only on video preview */}
+            {!hasStarted && !isLoading && !error && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-lg z-40">
+                <Button
+                  onClick={handleStart}
+                  className="px-12 py-6 text-xl font-semibold"
+                  size="lg"
+                >
+                  Start
+                </Button>
+              </div>
+            )}
           </div>
+
+          {/* Exposure Slider */}
+          {!isLoading && !error && (
+            <div className="w-120 mt-4 px-4">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleExposureDecrease}
+                  disabled={exposure <= 0}
+                  className="h-10 w-10 rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-white">Exposure</span>
+                    <span className="text-sm font-medium text-white">{exposure}</span>
+                  </div>
+                  <div 
+                    className="relative w-full"
+                    onMouseDown={(e) => {
+                      // Handle click on track
+                      if (e.target === e.currentTarget || e.target.classList.contains('bg-white/20')) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                        const newValue = Math.round(percentage);
+                        handleExposureChange(newValue);
+                      }
+                    }}
+                  >
+                    <div className="relative h-3 w-full bg-white/20 rounded-full overflow-hidden cursor-pointer">
+                      <div
+                        className="absolute h-full bg-white rounded-full transition-all duration-150"
+                        style={{ width: `${exposure}%` }}
+                      />
+                      <div
+                        className="absolute h-6 w-6 -top-1.5 rounded-full bg-white border-2 border-white shadow-lg cursor-grab active:cursor-grabbing transition-all hover:scale-110 z-10"
+                        style={{
+                          left: `calc(${exposure}% - 12px)`,
+                        }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const slider = e.currentTarget.parentElement;
+                          const rect = slider.getBoundingClientRect();
+                          
+                          const handleMove = (moveEvent) => {
+                            const x = moveEvent.clientX - rect.left;
+                            const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                            const newValue = Math.round(percentage);
+                            handleExposureChange(newValue);
+                          };
+                          
+                          const handleUp = () => {
+                            document.removeEventListener("mousemove", handleMove);
+                            document.removeEventListener("mouseup", handleUp);
+                          };
+                          
+                          handleMove(e);
+                          document.addEventListener("mousemove", handleMove);
+                          document.addEventListener("mouseup", handleUp);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleExposureIncrease}
+                  disabled={exposure >= 100}
+                  className="h-10 w-10 rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           <canvas ref={canvasRef} className="hidden" />
         </div>
@@ -288,18 +520,6 @@ export default function CameraSession() {
         </div>
       </div>
 
-      {/* Start Overlay - Dark overlay with Start button */}
-      {!hasStarted && !isLoading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-40">
-          <Button
-            onClick={handleStart}
-            className="px-12 py-6 text-xl font-semibold"
-            size="lg"
-          >
-            Start
-          </Button>
-        </div>
-      )}
 
       {/* Next Button - Show when 3 photos are captured */}
       {photos.length === 3 && (

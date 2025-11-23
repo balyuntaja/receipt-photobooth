@@ -23,7 +23,7 @@ export default function PreviewPrint() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState(null);
   const [isUploaded, setIsUploaded] = useState(false);
-  
+
   const {
     sessionId,
     resetSession,
@@ -117,7 +117,7 @@ export default function PreviewPrint() {
   };
 
   // Generate QR Code URL with sessionId
-  const qrCodeUrl = sessionId 
+  const qrCodeUrl = sessionId
     ? `${window.location.origin}/photo-result?sessionId=${sessionId}`
     : "https://example.com/photostrip-dummy";
 
@@ -232,7 +232,7 @@ export default function PreviewPrint() {
 
   return (
     <PageLayout containerRef={containerRef}>
-      
+
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-8 text-center">
@@ -288,28 +288,6 @@ export default function PreviewPrint() {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-4">
-                  <Button onClick={handlePrint} disabled={isPrinting} className="flex-1" size="lg">
-                    {isPrinting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Mencetak...
-                      </>
-                    ) : (
-                      <>
-                        <Printer className="mr-2 h-4 w-4" />
-                        Print
-                      </>
-                    )}
-                  </Button>
-                  <Button variant="outline" onClick={handleDownload} className="flex-1" size="lg">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
-                  </Button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -321,11 +299,11 @@ export default function PreviewPrint() {
                 Scan QR Code ini untuk mengunduh file foto digital
               </p>
               <div className="bg-white p-4 rounded-lg border-2 border-primary/20">
-                <QRCodeSVG 
-                  value={qrCodeUrl} 
-                  size={250} 
-                  level="H" 
-                  includeMargin={true} 
+                <QRCodeSVG
+                  value={qrCodeUrl}
+                  size={250}
+                  level="H"
+                  includeMargin={true}
                 />
               </div>
               <p className="text-xs text-white/70 mt-4 text-center max-w-xs">

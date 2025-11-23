@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Minus, Plus } from "lucide-react";
 import { templates } from "@/lib/templates";
 import { mergePhotoWithTemplate } from "@/lib/image-processing";
 import { calculatePhotoPosition } from "@/lib/utils";
 import { PRINT_CONFIG } from "@/lib/templates";
 import { COLORS } from "@/lib/constants";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
-import { dataURLtoFile } from "@/lib/api";
+import { dataURLtoFile, printPhoto } from "@/lib/api";
 import PageLayout from "./common/PageLayout";
 import PhotoGrid from "./common/PhotoGrid";
 import PhotoEditor from "./common/PhotoEditor";
@@ -26,7 +26,10 @@ export default function PhotoSelection() {
   const mergeTimeoutRef = useRef(null);
   const isMergingRef = useRef(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [isMirrored, setIsMirrored] = useState(false);
+  const [printCount, setPrintCount] = useState(1); // Jumlah print, default 1
+  const [printError, setPrintError] = useState(null);
 
   // Photo editor state (position and scale)
   const [photoTransform, setPhotoTransform] = useState({
@@ -216,6 +219,7 @@ export default function PhotoSelection() {
       : [];
 
     setIsUploading(true);
+    setPrintError(null);
 
     try {
       const filesToUpload = [];
@@ -240,14 +244,31 @@ export default function PhotoSelection() {
           console.warn("Upload failed before preview:", result?.message);
         }
       }
+
+      // Print photostrip
+      setIsPrinting(true);
+      try {
+        const printResult = await printPhoto(photostripFile, printCount.toString());
+        if (printResult.success) {
+          console.log("Print successful:", printResult);
+        } else {
+          console.warn("Print failed:", printResult.message);
+          setPrintError(printResult.message || "Gagal mencetak foto");
+        }
+      } catch (printErr) {
+        console.error("Print error:", printErr);
+        setPrintError("Terjadi kesalahan saat mencetak foto");
+      } finally {
+        setIsPrinting(false);
+      }
     } catch (error) {
       console.error("Upload error before preview:", error);
     } finally {
       setIsUploading(false);
 
-      // Navigate to preview regardless of upload result
+      // Navigate to preview regardless of upload/print result
       navigate("/preview-print", {
-        state: { templateId, mergedImage, downloadUrl, selectedPhoto, photos, isMirrored },
+        state: { templateId, mergedImage, downloadUrl, selectedPhoto, photos, isMirrored, printCount },
       });
     }
   };
@@ -325,6 +346,19 @@ export default function PhotoSelection() {
                   </div>
                 )}
 
+                {isPrinting && (
+                  <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Mencetak {printCount} salinan...
+                  </div>
+                )}
+
+                {printError && (
+                  <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded-lg text-sm mb-4">
+                    {printError}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-center gap-3 text-white/80">
                   <button
                     type="button"
@@ -341,15 +375,49 @@ export default function PhotoSelection() {
                   </button>
                   <span className="text-xs font-semibold uppercase tracking-wide">Mirror image</span>
                 </div>
+
+                {/* Print Count Control */}
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-sm font-medium text-white/80">Jumlah Print</span>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setPrintCount((prev) => Math.max(1, prev - 1))}
+                      disabled={printCount <= 1}
+                      className="h-10 w-10 rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    
+                    <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                      {printCount}
+                    </span>
+                    
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setPrintCount((prev) => Math.min(10, prev + 1))}
+                      disabled={printCount >= 10}
+                      className="h-10 w-10 rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
                 
                 <Button 
                   onClick={handleNext} 
                   className="w-full" 
                   size="lg" 
-                  disabled={!mergedImage || isMerging || isUploading}
+                  disabled={!mergedImage || isMerging || isUploading || isPrinting}
                 >
                   {isMerging ? (
                     "Menggabungkan..."
+                  ) : isUploading ? (
+                    "Mengupload..."
+                  ) : isPrinting ? (
+                    "Mencetak..."
                   ) : mergedImage ? (
                     "Lanjut ke Print"
                   ) : (
