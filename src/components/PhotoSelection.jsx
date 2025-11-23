@@ -8,7 +8,8 @@ import { calculatePhotoPosition } from "@/lib/utils";
 import { PRINT_CONFIG } from "@/lib/templates";
 import { COLORS } from "@/lib/constants";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
-import { dataURLtoFile, printPhoto } from "@/lib/api";
+import { dataURLtoFile } from "@/lib/api";
+import { printPhotostripFromFile, isPrinterConnected as checkPrinterConnected } from "@/lib/printer";
 import PageLayout from "./common/PageLayout";
 import PhotoGrid from "./common/PhotoGrid";
 import PhotoEditor from "./common/PhotoEditor";
@@ -246,20 +247,18 @@ export default function PhotoSelection() {
       }
 
       // Print photostrip
-      setIsPrinting(true);
-      try {
-        const printResult = await printPhoto(photostripFile, printCount.toString());
-        if (printResult.success) {
-          console.log("Print successful:", printResult);
-        } else {
-          console.warn("Print failed:", printResult.message);
-          setPrintError(printResult.message || "Gagal mencetak foto");
+      if (checkPrinterConnected()) {
+        setIsPrinting(true);
+        try {
+          await printPhotostripFromFile(photostripFile, printCount);
+          console.log(`Printed ${printCount} copy/copies successfully`);
+        } catch (printErr) {
+          console.error("Print error:", printErr);
+          const errorMessage = printErr instanceof Error ? printErr.message : "Gagal mencetak foto";
+          setPrintError(errorMessage);
+        } finally {
+          setIsPrinting(false);
         }
-      } catch (printErr) {
-        console.error("Print error:", printErr);
-        setPrintError("Terjadi kesalahan saat mencetak foto");
-      } finally {
-        setIsPrinting(false);
       }
     } catch (error) {
       console.error("Upload error before preview:", error);
@@ -359,6 +358,17 @@ export default function PhotoSelection() {
                   </div>
                 )}
 
+                {/* Printer Connection Status */}
+                <div className="flex items-center justify-center mb-4">
+                  <span className="text-sm text-white/70">
+                    Status Printer: {checkPrinterConnected() ? (
+                      <span className="text-green-400">Terhubung</span>
+                    ) : (
+                      <span className="text-red-400">Tidak Terhubung</span>
+                    )}
+                  </span>
+                </div>
+
                 <div className="flex items-center justify-center gap-3 text-white/80">
                   <button
                     type="button"
@@ -390,7 +400,7 @@ export default function PhotoSelection() {
                       <Minus className="h-4 w-4" />
                     </Button>
                     
-                    <span className="text-2xl font-bold text-white min-w-[3rem] text-center">
+                    <span className="text-2xl font-bold text-white min-w-12 text-center">
                       {printCount}
                     </span>
                     

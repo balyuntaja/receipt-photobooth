@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from "react";
+import { connectPrinter, isPrinterConnected as checkPrinterConnected } from "@/lib/printer";
+import { Button } from "@/components/ui/Button";
 
 export default function CameraSettingModal({ open, onClose }) {
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
+  const [isPrinterConnected, setIsPrinterConnected] = useState(false);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -50,6 +53,13 @@ export default function CameraSettingModal({ open, onClose }) {
     };
   }, [selectedDeviceId, open]);
 
+  // Check printer connection status
+  useEffect(() => {
+    if (open) {
+      setIsPrinterConnected(checkPrinterConnected());
+    }
+  }, [open]);
+
   // Cleanup on close
   useEffect(() => {
     if (!open && streamRef.current) {
@@ -57,6 +67,17 @@ export default function CameraSettingModal({ open, onClose }) {
       streamRef.current = null;
     }
   }, [open]);
+
+  const handleConnectPrinter = async () => {
+    try {
+      await connectPrinter();
+      setIsPrinterConnected(true);
+      alert("Printer terhubung!");
+    } catch (error) {
+      console.error("Error connecting printer:", error);
+      alert("Gagal menghubungkan printer. Pastikan printer terhubung dan browser mendukung WebUSB.");
+    }
+  };
 
   if (!open) return null;
 
@@ -84,9 +105,32 @@ export default function CameraSettingModal({ open, onClose }) {
         </select>
         {/* Video Preview */}
         <video ref={videoRef} autoPlay playsInline className="w-full rounded mb-4" />
+        
+        {/* Printer Connection Section */}
+        <div className="border-t pt-4 mt-4">
+          <label className="block mb-2 font-medium">Printer:</label>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm">
+              Status: {isPrinterConnected ? (
+                <span className="text-green-600 font-semibold">Terhubung</span>
+              ) : (
+                <span className="text-red-600 font-semibold">Tidak Terhubung</span>
+              )}
+            </span>
+          </div>
+          {!isPrinterConnected && (
+            <button
+              onClick={handleConnectPrinter}
+              className="bg-blue-600 text-white px-4 py-2 rounded w-full mb-4 hover:bg-blue-700 transition-colors"
+            >
+              Hubungkan Printer
+            </button>
+          )}
+        </div>
+
         <button
           onClick={onClose}
-          className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+          className="bg-red-600 text-white px-4 py-2 rounded w-full"
         >
           Close
         </button>
