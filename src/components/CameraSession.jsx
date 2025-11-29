@@ -369,10 +369,13 @@ export default function CameraSession() {
       </Button>
 
       {/* Grid dengan rasio 2:1: Camera View dan Photos Preview */}
-      <div className="grid grid-cols-3 gap-6 w-full max-w-7xl mt-16">
+      {/* Tablet: Layout lebih kompak dengan gap dan margin yang lebih kecil */}
+      <div className="grid grid-cols-3 gap-6 w-full max-w-7xl mt-16 camera-session-grid">
         {/* LEFT COLUMN - Camera View (2 bagian) */}
+        {/* Tablet: Kolom kiri lebih kompak, mengurangi spacing */}
         <div className="col-span-2 flex flex-col items-center">
-          <div className="relative w-full" style={{ aspectRatio: "4/3" }}>
+          {/* Tablet: Video preview lebih kecil untuk muat dalam satu layar */}
+          <div className="relative w-full camera-session-video" style={{ aspectRatio: "4/3" }}>
             <video
               ref={videoRef}
               autoPlay
@@ -397,8 +400,9 @@ export default function CameraSession() {
           </div>
 
           {/* Exposure Slider */}
+          {/* Tablet: Exposure slider lebih kompak, width disesuaikan */}
           {!isLoading && !error && (
-            <div className="w-120 mt-4 px-4">
+            <div className="w-120 mt-4 px-4 camera-session-exposure">
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
@@ -482,9 +486,10 @@ export default function CameraSession() {
         </div>
 
         {/* RIGHT COLUMN - Photos Preview (1 bagian) */}
+        {/* Tablet: Kolom kanan lebih kompak, spacing dikurangi */}
         <div className="col-span-1 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Photos</h2>
-          <div className="text-sm text-white/70">
+          <h2 className="text-lg font-semibold text-white camera-session-photos-title">Photos</h2>
+          <div className="text-sm text-white/70 camera-session-photos-count">
             {photos.length}/3 photos captured
           </div>
 
@@ -493,7 +498,7 @@ export default function CameraSession() {
               No Photos Yet
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 camera-session-photos">
               {photos.map((photo, i) => (
                 <div
                   key={`photo-${i}-${photo.substring(0, 20)}`}
@@ -522,10 +527,11 @@ export default function CameraSession() {
 
 
       {/* Next Button - Show when 3 photos are captured */}
+      {/* Tablet: Tombol tetap terlihat, posisi disesuaikan agar tidak keluar layar */}
       {photos.length === 3 && (
         <Button
           onClick={handleNext}
-          className="absolute bottom-6 right-6 z-10"
+          className="absolute bottom-6 right-6 z-10 camera-session-next-btn"
           size="lg"
         >
           Selanjutnya

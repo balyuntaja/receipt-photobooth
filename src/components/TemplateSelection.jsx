@@ -74,7 +74,8 @@ export default function TemplateSelection() {
     <PageLayout containerRef={containerRef}>
       <div className="container mx-auto max-w-6xl py-5" style={{ width: "100%", maxWidth: "1152px" }}>
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        {/* Tablet: Header lebih kompak */}
+        <div className="mb-8 flex items-center justify-between template-selection-header">
           {/* Back Button - Left */}
           <Button variant="ghost" onClick={handleBack} className="text-white hover:text-white/80">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -94,7 +95,8 @@ export default function TemplateSelection() {
         </div>
 
         {/* Template Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Tablet: Grid layout lebih kompak untuk muat dalam satu layar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 template-selection-grid">
           {templates && templates.length > 0 ? (
             templates.map((template) => (
               <Card

@@ -142,3 +142,154 @@
   opacity: 0.9 !important;
   background-color: var(--primary) !important;
 }
+
+/* ============================================
+   TABLET RESPONSIVE STYLES (1280×800px)
+   ============================================
+   Breakpoint khusus untuk tablet dengan resolusi 1280×800px.
+   Memastikan layout single page tanpa scroll horizontal.
+   Desktop layout tetap tidak berubah.
+   ============================================ */
+
+/* Tablet breakpoint: max-width 1280px dan/atau max-height 800px */
+@media (max-width: 1280px) and (max-height: 800px),
+       (max-width: 1280px) and (height: 800px),
+       (width: 1280px) and (max-height: 800px) {
+  
+  /* Prevent horizontal scroll pada tablet */
+  body {
+    overflow-x: hidden !important;
+  }
+  
+  /* Kompensasi padding untuk tablet */
+  .min-h-screen {
+    min-height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+  
+  /* CameraSession - Grid layout lebih kompak */
+  .camera-session-grid {
+    gap: 1rem !important;
+    margin-top: 2rem !important;
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  /* CameraSession - Video preview lebih kompak */
+  .camera-session-video {
+    margin-top: 0.5rem !important;
+  }
+  
+  /* CameraSession - Exposure slider lebih kompak */
+  .camera-session-exposure {
+    width: 100% !important;
+    margin-top: 0.5rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  /* CameraSession - Photos preview lebih kompak */
+  .camera-session-photos {
+    gap: 0.375rem !important;
+  }
+  
+  .camera-session-photos img {
+    max-height: 120px !important;
+  }
+  
+  .camera-session-photos-title {
+    font-size: 1rem !important;
+  }
+  
+  .camera-session-photos-count {
+    font-size: 0.75rem !important;
+  }
+  
+  /* CameraSession - Next button tetap terlihat */
+  .camera-session-next-btn {
+    bottom: 1rem !important;
+    right: 1rem !important;
+    font-size: 0.875rem !important;
+    padding: 0.5rem 1rem !important;
+  }
+  
+  /* PhotoSelection - Grid layout lebih kompak */
+  .photo-selection-grid {
+    gap: 1rem !important;
+  }
+  
+  /* PhotoSelection - Pastikan tombol Print tetap terlihat */
+  .photo-selection-preview {
+    max-height: calc(100vh - 200px) !important;
+    overflow-y: auto !important;
+  }
+  
+  /* PreviewPrint - Grid layout lebih kompak */
+  .preview-print-grid {
+    gap: 1rem !important;
+  }
+  
+  /* PreviewPrint - Pastikan konten muat dalam satu layar */
+  .preview-print-container {
+    max-height: calc(100vh - 150px) !important;
+    overflow-y: auto !important;
+  }
+  
+  /* PreviewPrint - QR Code lebih kompak untuk tablet
+  .preview-print-qr {
+    max-width: 200px !important;
+  }
+  
+  .preview-print-qr svg {
+    width: 200px !important;
+    height: 200px !important;
+  } */
+  
+  /* TemplateSelection - Grid layout lebih kompak */
+  .template-selection-grid {
+    gap: 1rem !important;
+  }
+  
+  /* HomeScreen - Spacing lebih kompak untuk tablet */
+  .home-screen-content {
+    gap: 1.5rem !important;
+    padding-top: 2rem !important;
+  }
+  
+  .home-screen-title {
+    margin-bottom: 1.5rem !important;
+    max-width: 50% !important;
+  }
+  
+  .home-screen-subtitle {
+    padding-top: 1.5rem !important;
+    max-width: 90% !important;
+  }
+  
+  .home-screen-button {
+    width: 12rem !important;
+    height: 3.5rem !important;
+    font-size: 1rem !important;
+  }
+  
+  /* PageLayout - Padding lebih kecil untuk tablet */
+  .min-h-screen.p-4 {
+    padding: 1rem !important;
+  }
+  
+  /* TemplateSelection - Header lebih kompak */
+  .template-selection-header {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* PreviewPrint - Header lebih kompak */
+  .preview-print-header {
+    margin-bottom: 1rem !important;
+  }
+  
+  .preview-print-header h1 {
+    font-size: 1.5rem !important;
+  }
+}

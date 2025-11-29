@@ -70,14 +70,15 @@ export default function HomeScreen() {
       </div>
 
       {/* Title, Button, and Subtitle in center */}
-      <div className="flex flex-col gap-8 px-4 items-center justify-center flex-1 pt-16">
+      {/* Tablet: Spacing lebih kompak untuk muat dalam satu layar */}
+      <div className="flex flex-col gap-8 px-4 items-center justify-center flex-1 pt-16 home-screen-content">
         {/* Title in center */}
-        <img src={title} alt="Title" className="max-w-md w-full object-contain mb-12" />
+        <img src={title} alt="Title" className="max-w-md w-full object-contain mb-12 home-screen-title" />
         
         {/* Button */}
         <Button
           size="lg"
-          className="w-64 h-16 px-64 text-lg animate-bounce hover:opacity-90"
+          className="w-64 h-16 px-64 text-lg animate-bounce hover:opacity-90 home-screen-button"
           style={{ animationDuration: ANIMATION.BOUNCE_DURATION }}
           onClick={handleStart}
         >
@@ -85,7 +86,7 @@ export default function HomeScreen() {
         </Button>
 
         {/* Subtitle below button */}
-        <img src={subtitle} alt="Subtitle" className="max-w-md w-full object-contain pt-12" />
+        <img src={subtitle} alt="Subtitle" className="max-w-md w-full object-contain pt-12 home-screen-subtitle" />
       </div>
     </PageLayout>
   );

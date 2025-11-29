@@ -233,16 +233,19 @@ export default function PreviewPrint() {
   return (
     <PageLayout containerRef={containerRef}>
 
-      <div className="container mx-auto max-w-6xl">
+      {/* Tablet: Container dengan max-height untuk memastikan semua konten muat dalam satu layar */}
+      <div className="container mx-auto max-w-6xl preview-print-container">
         {/* Header */}
-        <div className="mb-8 text-center">
+        {/* Tablet: Header lebih kompak */}
+        <div className="mb-8 text-center preview-print-header">
           <h1 className="text-3xl font-bold mb-2 text-white">Preview & Print</h1>
           <p className="text-muted-foreground text-white">
             Silakan cetak atau unduh hasil photostrip Anda
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Tablet: Grid layout lebih kompak untuk muat dalam satu layar, tombol Print tetap terlihat */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 preview-print-grid">
           {/* Preview Image */}
           <div>
             <h2 className="text-xl font-semibold mb-4 text-white">Hasil Photostrip</h2>
@@ -292,13 +295,14 @@ export default function PreviewPrint() {
           </div>
 
           {/* QR Code */}
+          {/* Tablet: QR Code lebih kompak untuk muat dalam satu layar */}
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-white">Download Digital</h2>
             <div className="bg-primary/80 border-2 border-transparent rounded-2xl shadow-lg p-6 flex flex-col items-center">
               <p className="text-sm text-white/70 mb-4 text-center max-w-xs">
                 Scan QR Code ini untuk mengunduh file foto digital
               </p>
-              <div className="bg-white p-4 rounded-lg border-2 border-primary/20">
+              <div className="bg-white p-4 rounded-lg border-2 border-primary/20 preview-print-qr">
                 <QRCodeSVG
                   value={qrCodeUrl}
                   size={250}

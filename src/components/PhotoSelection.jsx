@@ -289,13 +289,14 @@ export default function PhotoSelection() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold text-white">Pilih Foto Terbaik</h1>
-          <p className="text-muted-foreground mt-2 text-white">
+          <h1 className="text-3xl font-bold text-white">Pilih Satu Foto Terbaik</h1>
+          {/* <p className="text-muted-foreground mt-2 text-white">
             Pilih satu foto yang akan digunakan untuk photostrip
-          </p>
+          </p> */}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Tablet: Grid layout lebih kompak untuk muat dalam satu layar */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 photo-selection-grid">
           {/* Photo Selection */}
           <div>
             <h2 className="text-xl font-semibold mb-4 text-white">Foto Anda</h2>
@@ -309,7 +310,8 @@ export default function PhotoSelection() {
           </div>
 
           {/* Preview */}
-          <div>
+          {/* Tablet: Preview area dengan max-height untuk memastikan tombol Print tetap terlihat */}
+          <div className="photo-selection-preview">
             <h2 className="text-xl font-semibold mb-4 text-white">Preview</h2>
 
             {selectedPhotoIndex === null ? (
@@ -324,7 +326,7 @@ export default function PhotoSelection() {
                 <p className="text-white">Menggabungkan foto dengan template...</p>
               </div>
             ) : selectedPhoto && template ? (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 {/* Photo Preview - No editing features */}
                 <PhotoEditor
                   photoUrl={selectedPhoto}
@@ -358,7 +360,7 @@ export default function PhotoSelection() {
                   </div>
                 )}
 
-                {/* Printer Connection Status */}
+                {/* Printer Connection Status
                 <div className="flex items-center justify-center mb-4">
                   <span className="text-sm text-white/70">
                     Status Printer: {checkPrinterConnected() ? (
@@ -367,7 +369,7 @@ export default function PhotoSelection() {
                       <span className="text-red-400">Tidak Terhubung</span>
                     )}
                   </span>
-                </div>
+                </div> */}
 
                 <div className="flex items-center justify-center gap-3 text-white/80">
                   <button
