@@ -155,7 +155,7 @@ export default function CameraSession() {
       setIsCapturing(true);
       isCapturingRef.current = true;
 
-      const targetPhotos = 3;
+      const targetPhotos = 1;
 
       const captureSequence = async () => {
         // Prevent multiple simultaneous captures
@@ -273,7 +273,7 @@ export default function CameraSession() {
   };
 
   const handleNext = () => {
-    if (photos.length === 3) {
+    if (photos.length === 1) {
       navigate("/select-photo", {
         state: { templateId, photos },
       });
@@ -490,7 +490,7 @@ export default function CameraSession() {
         <div className="col-span-1 space-y-4">
           <h2 className="text-lg font-semibold text-white camera-session-photos-title">Photos</h2>
           <div className="text-sm text-white/70 camera-session-photos-count">
-            {photos.length}/3 photos captured
+            {photos.length}/1 photos captured
           </div>
 
           {photos.length === 0 ? (
@@ -528,7 +528,7 @@ export default function CameraSession() {
 
       {/* Next Button - Show when 3 photos are captured */}
       {/* Tablet: Tombol tetap terlihat, posisi disesuaikan agar tidak keluar layar */}
-      {photos.length === 3 && (
+      {photos.length === 1 && (
         <Button
           onClick={handleNext}
           className="absolute bottom-6 right-6 z-10 camera-session-next-btn"

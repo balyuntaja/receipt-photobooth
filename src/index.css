@@ -179,7 +179,7 @@
   
   /* CameraSession - Video preview lebih kompak */
   .camera-session-video {
-    margin-top: 0.5rem !important;
+    margin-top: 2rem !important;
   }
   
   /* CameraSession - Exposure slider lebih kompak */
@@ -215,37 +215,78 @@
     padding: 0.5rem 1rem !important;
   }
   
-  /* PhotoSelection - Grid layout lebih kompak */
+  /* PhotoSelection - Grid layout lebih kompak, tetap 2 kolom seperti desktop */
   .photo-selection-grid {
-    gap: 1rem !important;
+    gap: 1.5rem !important;
+    grid-template-columns: 1fr 1fr !important;
   }
   
-  /* PhotoSelection - Pastikan tombol Print tetap terlihat */
+  /* PhotoSelection - Pastikan tombol Print tetap terlihat, styling mirip desktop */
   .photo-selection-preview {
     max-height: calc(100vh - 200px) !important;
     overflow-y: auto !important;
   }
   
-  /* PreviewPrint - Grid layout lebih kompak */
+  /* PhotoSelection - Preview controls tetap mirip desktop di tablet */
+  .photo-selection-controls {
+    gap: 1.5rem !important;
+  }
+  
+  /* PhotoSelection - Canvas editor tetap terlihat semua di tablet */
+  .photo-selection-editor {
+    max-height: 400px !important;
+    overflow: hidden !important;
+  }
+  
+  /* PhotoEditor container - sesuaikan tinggi untuk tablet */
+  .photo-selection-editor > div {
+    max-height: 380px !important;
+    height: auto !important;
+  }
+  
+  /* PhotoEditor canvas container - pastikan tidak overflow */
+  .photo-selection-editor .relative {
+    max-height: 380px !important;
+    height: auto !important;
+  }
+  
+  /* PhotoEditor canvas - tetap terlihat semua dengan object-fit contain */
+  .photo-selection-editor canvas {
+    max-height: 380px !important;
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+  
+  /* PreviewPrint - Grid layout lebih kompak, tetap 2 kolom seperti desktop */
   .preview-print-grid {
     gap: 1rem !important;
+    grid-template-columns: 1fr 1fr !important;
   }
   
   /* PreviewPrint - Pastikan konten muat dalam satu layar */
   .preview-print-container {
     max-height: calc(100vh - 150px) !important;
     overflow-y: auto !important;
+    position: relative !important;
   }
   
-  /* PreviewPrint - QR Code lebih kompak untuk tablet
+  /* PreviewPrint - QR Code lebih kompak untuk tablet */
   .preview-print-qr {
-    max-width: 200px !important;
+    max-width: 220px !important;
   }
   
   .preview-print-qr svg {
-    width: 200px !important;
-    height: 200px !important;
-  } */
+    width: 220px !important;
+    height: 220px !important;
+  }
+  
+  /* PreviewPrint - New Session Button di bawah card Download Digital, ukuran sama dengan card */
+  .preview-print-new-session-btn {
+    width: 100% !important;
+    padding: 1.5rem !important;
+  }
   
   /* TemplateSelection - Grid layout lebih kompak */
   .template-selection-grid {
@@ -291,5 +332,168 @@
   
   .preview-print-header h1 {
     font-size: 1.5rem !important;
+  }
+}
+
+/* ============================================
+   SMALL TABLET/MOBILE LANDSCAPE (1100×700px ke bawah)
+   ============================================
+   Breakpoint untuk ukuran lebih kecil: max-width 1100px dan/atau max-height 700px.
+   Layout lebih kompak lagi untuk memastikan tidak perlu scroll.
+   ============================================ */
+
+@media (max-width: 1100px) and (max-height: 700px),
+       (max-width: 1100px) and (height: 700px),
+       (width: 1100px) and (max-height: 700px),
+       (max-width: 1100px),
+       (max-height: 700px) {
+  
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden !important;
+  }
+  
+  /* PageLayout - Padding lebih kecil lagi */
+  .min-h-screen.p-4 {
+    padding: 0.75rem !important;
+  }
+  
+  /* PhotoSelection - Header lebih kompak */
+  .photo-selection-header {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .photo-selection-header h1 {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* PhotoSelection - Grid layout lebih kompak, tetap 2 kolom seperti desktop */
+  .photo-selection-grid {
+    gap: 0.75rem !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+  
+  /* PhotoSelection - Kolom kiri dan kanan proporsional */
+  .photo-selection-grid > div {
+    min-width: 0 !important;
+  }
+  
+  /* PhotoSelection - Photo grid lebih kompak */
+  .photo-selection-photo-grid {
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* PhotoSelection - Preview area lebih kompak */
+  .photo-selection-preview {
+    max-height: calc(100vh - 120px) !important;
+    overflow-y: auto !important;
+  }
+  
+  .photo-selection-preview h2 {
+    font-size: 1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* PhotoSelection - PhotoEditor lebih kompak untuk ukuran kecil */
+  .photo-selection-editor {
+    max-height: 280px !important;
+    overflow: hidden !important;
+  }
+  
+  /* PhotoEditor container - sesuaikan tinggi untuk ukuran kecil */
+  .photo-selection-editor > div {
+    max-height: 260px !important;
+    height: auto !important;
+  }
+  
+  /* PhotoEditor canvas container - pastikan tidak overflow */
+  .photo-selection-editor .relative {
+    max-height: 260px !important;
+    height: auto !important;
+  }
+  
+  /* PhotoEditor canvas - tetap terlihat semua dengan object-fit contain */
+  .photo-selection-editor canvas {
+    max-height: 260px !important;
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+  
+  /* PhotoSelection - Controls lebih kompak */
+  .photo-selection-controls {
+    gap: 0.5rem !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .photo-selection-controls > * {
+    margin-bottom: 0.25rem !important;
+  }
+  
+  /* PhotoSelection - Button lebih kecil */
+  .photo-selection-button {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+  
+  /* PhotoSelection - Print count control lebih kompak */
+  .photo-selection-print-count {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .photo-selection-print-count span {
+    font-size: 0.875rem !important;
+  }
+  
+  /* PhotoSelection - Mirror toggle lebih kecil */
+  .photo-selection-mirror {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .photo-selection-mirror button {
+    height: 1.75rem !important;
+    width: 3rem !important;
+  }
+  
+  .photo-selection-mirror span {
+    font-size: 0.625rem !important;
+  }
+  
+  /* PhotoSelection - Status messages lebih kompak */
+  .photo-selection-status {
+    padding: 0.5rem !important;
+    font-size: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* PreviewPrint - Grid layout tetap 2 kolom di ukuran kecil */
+  .preview-print-grid {
+    gap: 0.75rem !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+  
+  /* PreviewPrint - Kolom kiri dan kanan proporsional */
+  .preview-print-grid > div {
+    min-width: 0 !important;
+  }
+  
+  /* PreviewPrint - Header lebih kompak di ukuran kecil */
+  .preview-print-header {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .preview-print-header h1 {
+    font-size: 1.25rem !important;
+  }
+  
+  /* PreviewPrint - QR Code lebih kecil di ukuran kecil */
+  .preview-print-qr svg {
+    width: 180px !important;
+    height: 180px !important;
   }
 }

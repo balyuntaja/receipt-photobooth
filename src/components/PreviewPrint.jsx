@@ -234,7 +234,7 @@ export default function PreviewPrint() {
     <PageLayout containerRef={containerRef}>
 
       {/* Tablet: Container dengan max-height untuk memastikan semua konten muat dalam satu layar */}
-      <div className="container mx-auto max-w-6xl preview-print-container">
+      <div className="container mx-auto max-w-6xl preview-print-container relative">
         {/* Header */}
         {/* Tablet: Header lebih kompak */}
         <div className="mb-8 text-center preview-print-header">
@@ -244,8 +244,8 @@ export default function PreviewPrint() {
           </p>
         </div>
 
-        {/* Tablet: Grid layout lebih kompak untuk muat dalam satu layar, tombol Print tetap terlihat */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 preview-print-grid">
+        {/* Grid layout: Hasil Photostrip dan Download Digital selalu 2 kolom (kiri-kanan) */}
+        <div className="grid grid-cols-2 gap-8 preview-print-grid">
           {/* Preview Image */}
           <div>
             <h2 className="text-xl font-semibold mb-4 text-white">Hasil Photostrip</h2>
@@ -300,7 +300,7 @@ export default function PreviewPrint() {
             <h2 className="text-xl font-semibold text-white">Download Digital</h2>
             <div className="bg-primary/80 border-2 border-transparent rounded-2xl shadow-lg p-6 flex flex-col items-center">
               <p className="text-sm text-white/70 mb-4 text-center max-w-xs">
-                Scan QR Code ini untuk mengunduh file foto digital
+                Scan QR Code ini untuk mengunduh foto
               </p>
               <div className="bg-white p-4 rounded-lg border-2 border-primary/20 preview-print-qr">
                 <QRCodeSVG
@@ -310,23 +310,28 @@ export default function PreviewPrint() {
                   includeMargin={true}
                 />
               </div>
-              <p className="text-xs text-white/70 mt-4 text-center max-w-xs">
-                Scan QR Code untuk mendapatkan foto digital
-              </p>
               {sessionId && (
                 <p className="text-xs text-white/50 mt-2 text-center max-w-xs font-mono">
-                  Session: {sessionId.substring(0, 20)}
+                  Session ID: {sessionId.substring(0, 20)}
                 </p>
               )}
             </div>
-
-            <Button variant="outline" onClick={handleNewSession} className="w-full" size="lg">
+            
+            {/* New Session Button - Di bawah card Download Digital, ukuran sama dengan card */}
+            <Button 
+              variant="outline" 
+              onClick={handleNewSession} 
+              className="w-full preview-print-new-session-btn" 
+              size="lg"
+            >
               <RotateCcw className="mr-2 h-4 w-4" />
               New Session
             </Button>
           </div>
+          
         </div>
       </div>
+      
     </PageLayout>
   );
 }

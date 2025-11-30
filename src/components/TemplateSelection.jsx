@@ -102,7 +102,7 @@ export default function TemplateSelection() {
               <Card
                 key={template.id}
                 className={cn(
-                  "cursor-pointer transition-all hover:shadow-lg py-5 bg-black/10",
+                  "cursor-pointer transition-all hover:shadow-lg py-2 bg-black/10",
                   selectedTemplate === template.id
                     ? "bg-primary border-2 border-white"
                     : "bg-primary/80 border-2 border-transparent"

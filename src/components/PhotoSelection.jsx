@@ -280,7 +280,8 @@ export default function PhotoSelection() {
     <PageLayout>
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
+        {/* Small tablet: Header lebih kompak untuk muat dalam satu layar */}
+        <div className="mb-8 photo-selection-header">
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -295,8 +296,8 @@ export default function PhotoSelection() {
           </p> */}
         </div>
 
-        {/* Tablet: Grid layout lebih kompak untuk muat dalam satu layar */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 photo-selection-grid">
+        {/* Grid layout: Preview selalu di sebelah kanan, mirip tampilan desktop */}
+        <div className="grid grid-cols-2 gap-8 photo-selection-grid">
           {/* Photo Selection */}
           <div>
             <h2 className="text-xl font-semibold mb-4 text-white">Foto Anda</h2>
@@ -305,7 +306,7 @@ export default function PhotoSelection() {
               selectedIndex={selectedPhotoIndex}
               onPhotoSelect={handlePhotoSelect}
               gridCols={2}
-              className="mb-6"
+              className="mb-2 photo-selection-photo-grid"
             />
           </div>
 
@@ -326,36 +327,39 @@ export default function PhotoSelection() {
                 <p className="text-white">Menggabungkan foto dengan template...</p>
               </div>
             ) : selectedPhoto && template ? (
-              <div className="space-y-2">
+              // Preview controls - styling mirip desktop
+              <div className="space-y-6 photo-selection-controls">
                 {/* Photo Preview - No editing features */}
-                <PhotoEditor
-                  photoUrl={selectedPhoto}
-                  templateUrl={template.templateImage || template.previewImage}
-                  photoArea={template.previewArea || template.photoArea}
-                  templateDimensions={template.dimensions}
-                  onPhotoChange={undefined}
-                  initialScale={1}
-                  initialX={0}
-                  initialY={0}
-                  mirror={isMirrored}
-                />
+                <div className="photo-selection-editor">
+                  <PhotoEditor
+                    photoUrl={selectedPhoto}
+                    templateUrl={template.templateImage || template.previewImage}
+                    photoArea={template.previewArea || template.photoArea}
+                    templateDimensions={template.dimensions}
+                    onPhotoChange={undefined}
+                    initialScale={1}
+                    initialX={0}
+                    initialY={0}
+                    mirror={isMirrored}
+                  />
+                </div>
 
                 {isUploading && (
-                  <div className="bg-blue-500/20 border border-blue-500 text-blue-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
+                  <div className="bg-blue-500/20 border border-blue-500 text-blue-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4 photo-selection-status">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Mengupload ke cloud...
                   </div>
                 )}
 
                 {isPrinting && (
-                  <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
+                  <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4 photo-selection-status">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Mencetak {printCount} salinan...
                   </div>
                 )}
 
                 {printError && (
-                  <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded-lg text-sm mb-4">
+                  <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded-lg text-sm mb-4 photo-selection-status">
                     {printError}
                   </div>
                 )}
@@ -371,7 +375,8 @@ export default function PhotoSelection() {
                   </span>
                 </div> */}
 
-                <div className="flex items-center justify-center gap-3 text-white/80">
+                {/* Small tablet: Mirror toggle lebih kompak */}
+                <div className="flex items-center justify-center gap-3 text-white/80 photo-selection-mirror">
                   <button
                     type="button"
                     onClick={() => setIsMirrored((prev) => !prev)}
@@ -389,9 +394,10 @@ export default function PhotoSelection() {
                 </div>
 
                 {/* Print Count Control */}
-                <div className="flex flex-col items-center gap-2">
+                {/* Small tablet: Print count control lebih kompak */}
+                <div className="flex flex-col items-center gap-4 photo-selection-print-count">
                   <span className="text-sm font-medium text-white/80">Jumlah Print</span>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="icon"
@@ -418,9 +424,10 @@ export default function PhotoSelection() {
                   </div>
                 </div>
                 
+                {/* Small tablet: Button lebih kompak */}
                 <Button 
                   onClick={handleNext} 
-                  className="w-full" 
+                  className="w-full photo-selection-button mt-4" 
                   size="lg" 
                   disabled={!mergedImage || isMerging || isUploading || isPrinting}
                 >
