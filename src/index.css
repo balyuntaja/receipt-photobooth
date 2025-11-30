@@ -282,10 +282,16 @@
     height: 220px !important;
   }
   
-  /* PreviewPrint - New Session Button di bawah card Download Digital, ukuran sama dengan card */
+  /* PreviewPrint - New Session Button di pojok kanan bawah, ukuran sama dengan card Download Digital */
   .preview-print-new-session-btn {
-    width: 100% !important;
+    width: calc(50% - 0.5rem) !important;
+    max-width: calc(50% - 0.5rem) !important;
     padding: 1.5rem !important;
+  }
+  
+  /* PreviewPrint - Container relative untuk positioning button */
+  .preview-print-container {
+    position: relative !important;
   }
   
   /* TemplateSelection - Grid layout lebih kompak */
