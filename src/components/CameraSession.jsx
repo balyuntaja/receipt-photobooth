@@ -32,7 +32,7 @@ export default function CameraSession() {
   const template = templates.find((t) => t.id === templateId);
 
   // Custom hooks
-  const { videoRef, error, startCamera, stopCamera, isLoading } = useCamera(cameraFacingMode);
+  const { videoRef, error, startCamera, stopCamera, isLoading, retryCamera } = useCamera(cameraFacingMode);
   const { canvasRef, capturePhoto: capturePhotoFromVideo } = usePhotoCapture();
   const { countdown, startCountdown } = useCountdown(delay);
 
@@ -542,8 +542,15 @@ export default function CameraSession() {
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-50">
           <div className="bg-destructive text-white p-6 rounded-lg max-w-md mx-4">
-            <p className="mb-4">{error}</p>
-            <Button onClick={startCamera}>Coba Lagi</Button>
+            <pre className="mb-4 whitespace-pre-wrap text-sm font-sans">{error}</pre>
+            <div className="flex gap-3">
+              <Button onClick={retryCamera} className="flex-1">
+                Coba Lagi
+              </Button>
+              <Button onClick={startCamera} variant="outline" className="flex-1">
+                Retry Normal
+              </Button>
+            </div>
           </div>
         </div>
       )}
