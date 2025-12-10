@@ -118,10 +118,10 @@ export const templates: Template[] = [
       y: (PRINT_DIMENSIONS_CM.HEIGHT - PHOTO_AREA_HEIGHT_CM) / 2, // Center vertical
     },
     previewArea: {
-      width: 6.33, // cm
-      height: 5.66, // cm
-      x: 0.87, // cm
-      y: 0.3, // cm
+      width: 7.33, // cm
+      height: 5.49, // cm
+      x: 0.34, // cm
+      y: 0.65, // cm
     },
   },
   {
@@ -140,10 +140,10 @@ export const templates: Template[] = [
       y: (PRINT_DIMENSIONS_CM.HEIGHT - PHOTO_AREA_HEIGHT_CM) / 2, // Center vertical
     },
     previewArea: {
-      width: 6.88, // cm
-      height: 9.27, // cm
-      x: 0.56, // cm
-      y: 0.4, // cm
+      width: 6.4, // cm
+      height: 4.8, // cm
+      x: 1.09, // cm
+      y: 3.88, // cm
     },
   },
   {
@@ -162,10 +162,10 @@ export const templates: Template[] = [
       y: (PRINT_DIMENSIONS_CM.HEIGHT - PHOTO_AREA_HEIGHT_CM) / 2, // Center vertical
     },
     previewArea: {
-      width: 6.41, // cm
-      height: 4.74, // cm
-      x: 0.8, // cm
-      y: 1.21, // cm
+      width: 7.03, // cm
+      height: 5.27, // cm
+      x: 0.48, // cm
+      y: 1.01, // cm
     },
   },
 ];

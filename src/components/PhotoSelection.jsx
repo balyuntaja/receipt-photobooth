@@ -305,8 +305,7 @@ export default function PhotoSelection() {
               photos={photos}
               selectedIndex={selectedPhotoIndex}
               onPhotoSelect={handlePhotoSelect}
-              gridCols={2}
-              className="mb-2 photo-selection-photo-grid"
+              className="max-w-1000"
             />
           </div>
 

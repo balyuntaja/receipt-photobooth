@@ -498,17 +498,16 @@ export default function CameraSession() {
               No Photos Yet
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 camera-session-photos">
+            <div className="flex flex-col items-center justify-center">
               {photos.map((photo, i) => (
                 <div
                   key={`photo-${i}-${photo.substring(0, 20)}`}
-                  className="relative group"
+                  className="relative group w-full flex items-center justify-center"
                 >
                   <img
                     src={photo}
                     alt={`Photo ${i + 1}`}
-                    className="rounded-lg w-full object-contain"
-                    style={{ maxHeight: "200px", width: "100%" }}
+                    className="rounded-lg max-w-full h-auto object-contain"
                   />
                   <button
                     onClick={() => handleRetake(i)}

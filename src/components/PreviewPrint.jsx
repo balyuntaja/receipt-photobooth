@@ -24,10 +24,7 @@ export default function PreviewPrint() {
   const [printError, setPrintError] = useState(null);
   const [isUploaded, setIsUploaded] = useState(false);
 
-  const {
-    sessionId,
-    resetSession,
-  } = usePhotoUpload();
+  const { sessionId, resetSession } = usePhotoUpload();
 
   useEffect(() => {
     if (!mergedImage || !downloadUrl || !templateId) {
@@ -91,16 +88,13 @@ export default function PreviewPrint() {
       printWindow.document.write(printHTML);
       printWindow.document.close();
 
-      // Wait for image to load
       await new Promise((resolve) => {
         printWindow.onload = resolve;
         setTimeout(resolve, DELAYS.PRINT_LOAD);
       });
 
-      // Trigger print dialog
       printWindow.print();
 
-      // Close window after print
       setTimeout(() => {
         printWindow.close();
       }, 500);
@@ -116,36 +110,30 @@ export default function PreviewPrint() {
     }
   };
 
-  // Generate QR Code URL with sessionId
   const qrCodeUrl = sessionId
     ? `${window.location.origin}/photo-result?sessionId=${sessionId}`
     : "https://example.com/photostrip-dummy";
 
-  // Check upload status on mount (upload is done in PhotoSelection)
   useEffect(() => {
     const uploaded = sessionStorage.getItem(`uploaded_${sessionId}`);
-    if (uploaded === "true") {
-      setIsUploaded(true);
-    }
+    if (uploaded === "true") setIsUploaded(true);
   }, [sessionId]);
-
 
   const downloadCanvas = (canvas) => {
     canvas.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = `photostrip-${Date.now()}.png`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }, 'image/png');
+    }, "image/png");
   };
 
   const handleDownload = async () => {
     if (!selectedPhoto || !template) return;
 
     try {
-      // Create merge using previewArea (same as what's shown in PhotoEditor preview)
       const photoArea = template.previewArea || template.photoArea;
       const photoPosition = calculatePhotoPosition(
         photoArea,
@@ -171,20 +159,14 @@ export default function PreviewPrint() {
         return;
       }
 
-      // Create canvas from merged result
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = img.width;
         canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          downloadCanvas(canvas);
-        }
-      };
-      img.onerror = () => {
-        console.error("Failed to load merged image for download");
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        downloadCanvas(canvas);
       };
       img.src = merged;
     } catch (error) {
@@ -193,20 +175,14 @@ export default function PreviewPrint() {
   };
 
   const handleNewSession = () => {
-    // Reset sessionId for new session
     resetSession();
-    // Clear upload status for old session
-    if (sessionId) {
-      sessionStorage.removeItem(`uploaded_${sessionId}`);
-    }
-    // Navigate to home
+    if (sessionId) sessionStorage.removeItem(`uploaded_${sessionId}`);
     navigate("/");
   };
 
-  // Show loading or error state instead of returning null
   if (!templateId || !template) {
     return (
-      <PageLayout containerRef={containerRef}>
+      <PageLayout containerRef={containerRef} className="pt-4 pb-0">
         <div className="container mx-auto max-w-6xl text-center py-20">
           <p className="text-white text-lg">Loading...</p>
           <Button onClick={() => navigate("/templates")} className="mt-4">
@@ -219,10 +195,15 @@ export default function PreviewPrint() {
 
   if (!mergedImage) {
     return (
-      <PageLayout containerRef={containerRef}>
+      <PageLayout containerRef={containerRef} className="pt-4 pb-0">
         <div className="container mx-auto max-w-6xl text-center py-20">
           <p className="text-white text-lg mb-4">No merged image found</p>
-          <Button onClick={() => navigate("/select-photo", { state: { templateId, photos } })} className="mt-4">
+          <Button
+            onClick={() =>
+              navigate("/select-photo", { state: { templateId, photos } })
+            }
+            className="mt-4"
+          >
             Back to Photo Selection
           </Button>
         </div>
@@ -231,12 +212,10 @@ export default function PreviewPrint() {
   }
 
   return (
-    <PageLayout containerRef={containerRef}>
+    <PageLayout containerRef={containerRef} className="pt-4 pb-0">
+      <div className="container mx-auto max-w-6xl preview-print-container relative min-h-screen pb-6">
 
-      {/* Tablet: Container dengan max-height untuk memastikan semua konten muat dalam satu layar */}
-      <div className="container mx-auto max-w-6xl preview-print-container relative">
         {/* Header */}
-        {/* Tablet: Header lebih kompak */}
         <div className="mb-8 text-center preview-print-header">
           <h1 className="text-3xl font-bold mb-2 text-white">Preview & Print</h1>
           <p className="text-muted-foreground text-white">
@@ -244,23 +223,22 @@ export default function PreviewPrint() {
           </p>
         </div>
 
-        {/* Grid layout: Hasil Photostrip dan Download Digital selalu 2 kolom (kiri-kanan) */}
-        <div className="grid grid-cols-2 gap-8 preview-print-grid">
-          {/* Preview Image */}
+        {/* Grid layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-6 preview-print-grid">
+
+          {/* Left: Photostrip Preview */}
           <div>
-            <h2 className="text-xl font-semibold mb-4 text-white">Hasil Photostrip</h2>
-            <div className="space-y-6">
-              {/* Photo Preview - Using PhotoEditor like in PhotoSelection */}
+            <h2 className="text-xl font-semibold mb-3 text-white">Hasil Photostrip</h2>
+
+            <div className="space-y-5">
+
               {selectedPhoto ? (
-                <PhotoEditor className="py-6.5"
+                <PhotoEditor
+                  className="py-6.5"
                   photoUrl={selectedPhoto}
                   templateUrl={template.templateImage || template.previewImage}
                   photoArea={template.previewArea || template.photoArea}
                   templateDimensions={template.dimensions}
-                  onPhotoChange={undefined}
-                  initialScale={1}
-                  initialX={0}
-                  initialY={0}
                   mirror={isMirrored}
                 />
               ) : (
@@ -276,14 +254,12 @@ export default function PreviewPrint() {
                 </div>
               )}
 
-              {/* Print Error */}
               {printError && (
                 <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
                   <p className="text-sm">{printError}</p>
                 </div>
               )}
 
-              {/* Upload Status */}
               {isUploaded && (
                 <div className="bg-green-500/20 border border-green-500 text-green-200 p-3 rounded-lg text-sm flex items-center gap-2">
                   <Check className="h-4 w-4" />
@@ -294,44 +270,42 @@ export default function PreviewPrint() {
             </div>
           </div>
 
-          {/* QR Code */}
-          {/* Tablet: QR Code lebih kompak untuk muat dalam satu layar */}
-          <div className="space-y-4">
+          {/* Right */}
+          <div className="space-y-4 max-w-[340px] w-full mx-auto lg:mx-0 lg:pl-6">
+
             <h2 className="text-xl font-semibold text-white">Download Digital</h2>
-            <div className="bg-primary/80 border-2 border-transparent rounded-2xl shadow-lg p-6 flex flex-col items-center">
+
+            <div className="bg-primary/80 border-2 border-transparent rounded-2xl shadow-lg p-6 
+    flex flex-col items-center max-w-[340px] w-full mx-auto lg:mx-0">
+
               <p className="text-sm text-white/70 mb-4 text-center max-w-xs">
                 Scan QR Code ini untuk mengunduh foto
               </p>
-              <div className="bg-white p-4 rounded-lg border-2 border-primary/20 preview-print-qr">
-                <QRCodeSVG
-                  value={qrCodeUrl}
-                  size={250}
-                  level="H"
-                  includeMargin={true}
-                />
+
+              <div className="bg-white p-4 rounded-lg border-2 border-primary/20">
+                <QRCodeSVG value={qrCodeUrl} size={250} level="H" includeMargin={true} />
               </div>
+
               {sessionId && (
                 <p className="text-xs text-white/50 mt-2 text-center max-w-xs font-mono">
                   Session ID: {sessionId.substring(0, 20)}
                 </p>
               )}
             </div>
-            
-            {/* New Session Button - Di bawah card Download Digital, ukuran sama dengan card */}
-            <Button 
-              variant="outline" 
-              onClick={handleNewSession} 
-              className="w-full preview-print-new-session-btn" 
+
+            <Button
+              variant="outline"
+              onClick={handleNewSession}
+              className="w-full"
               size="lg"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               New Session
             </Button>
           </div>
-          
+
         </div>
       </div>
-      
     </PageLayout>
   );
 }
