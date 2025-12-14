@@ -221,42 +221,64 @@
     grid-template-columns: 1fr 1fr !important;
   }
   
-  /* PhotoSelection - Pastikan tombol Print tetap terlihat, styling mirip desktop */
+  /* PhotoSelection - Container tidak boleh scroll */
+  .photo-selection-container {
+    max-height: 100% !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+  
+  /* PhotoSelection - Pastikan tombol Print tetap terlihat tanpa scroll */
   .photo-selection-preview {
-    max-height: calc(100vh - 200px) !important;
-    overflow-y: auto !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
   }
   
-  /* PhotoSelection - Preview controls tetap mirip desktop di tablet */
+  /* PhotoSelection - Preview controls lebih kompak di tablet */
   .photo-selection-controls {
-    gap: 1.5rem !important;
+    gap: 1rem !important;
   }
   
-  /* PhotoSelection - Canvas editor tetap terlihat semua di tablet */
+  /* PhotoSelection - Canvas editor lebih kompak di tablet */
   .photo-selection-editor {
-    max-height: 400px !important;
+    max-height: 300px !important;
     overflow: hidden !important;
   }
   
   /* PhotoEditor container - sesuaikan tinggi untuk tablet */
   .photo-selection-editor > div {
-    max-height: 380px !important;
+    max-height: 280px !important;
     height: auto !important;
   }
   
   /* PhotoEditor canvas container - pastikan tidak overflow */
   .photo-selection-editor .relative {
-    max-height: 380px !important;
+    max-height: 280px !important;
     height: auto !important;
   }
   
   /* PhotoEditor canvas - tetap terlihat semua dengan object-fit contain */
   .photo-selection-editor canvas {
-    max-height: 380px !important;
+    max-height: 280px !important;
     max-width: 100% !important;
     width: auto !important;
     height: auto !important;
     object-fit: contain !important;
+  }
+  
+  /* PhotoSelection - Header lebih kompak untuk tablet */
+  .photo-selection-header {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .photo-selection-header h1 {
+    font-size: 1.75rem !important;
+  }
+  
+  /* PhotoSelection - Section titles lebih kompak */
+  .photo-selection-grid h2 {
+    font-size: 1rem !important;
+    margin-bottom: 0.5rem !important;
   }
   
   /* PreviewPrint - Grid layout lebih kompak, tetap 2 kolom seperti desktop */
@@ -265,33 +287,65 @@
     grid-template-columns: 1fr 1fr !important;
   }
   
-  /* PreviewPrint - Pastikan konten muat dalam satu layar */
+  /* PreviewPrint - Pastikan konten muat dalam satu layar tanpa scroll */
   .preview-print-container {
-    max-height: calc(100vh - 150px) !important;
-    overflow-y: auto !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
     position: relative !important;
+  }
+  
+  /* PreviewPrint - Header lebih kompak untuk tablet */
+  .preview-print-header {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .preview-print-header h1 {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .preview-print-header p {
+    font-size: 0.875rem !important;
+  }
+  
+  /* PreviewPrint - Section titles lebih kompak */
+  .preview-print-grid h2 {
+    font-size: 1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* PreviewPrint - Spacing antar elemen lebih kompak */
+  .preview-print-grid > div > div {
+    gap: 0.75rem !important;
+  }
+  
+  /* PreviewPrint - QR Code container lebih kompak */
+  .preview-print-grid > div:last-child {
+    gap: 0.75rem !important;
+  }
+  
+  .preview-print-grid > div:last-child > div {
+    padding: 1rem !important;
   }
   
   /* PreviewPrint - QR Code lebih kompak untuk tablet */
   .preview-print-qr {
-    max-width: 220px !important;
+    max-width: 200px !important;
   }
   
   .preview-print-qr svg {
-    width: 220px !important;
-    height: 220px !important;
+    width: 200px !important;
+    height: 200px !important;
   }
   
-  /* PreviewPrint - New Session Button di pojok kanan bawah, ukuran sama dengan card Download Digital */
-  .preview-print-new-session-btn {
-    width: calc(50% - 0.5rem) !important;
-    max-width: calc(50% - 0.5rem) !important;
-    padding: 1.5rem !important;
+  /* PreviewPrint - Image preview lebih kompak */
+  .preview-print-grid img {
+    max-height: 250px !important;
   }
   
-  /* PreviewPrint - Container relative untuk positioning button */
-  .preview-print-container {
-    position: relative !important;
+  /* PreviewPrint - PhotoEditor lebih kompak */
+  .preview-print-grid canvas {
+    max-height: 250px !important;
   }
   
   /* TemplateSelection - Grid layout lebih kompak */
@@ -390,10 +444,17 @@
     margin-bottom: 0.5rem !important;
   }
   
-  /* PhotoSelection - Preview area lebih kompak */
+  /* PhotoSelection - Container tidak boleh scroll */
+  .photo-selection-container {
+    max-height: 100% !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+  
+  /* PhotoSelection - Preview area lebih kompak tanpa scroll */
   .photo-selection-preview {
-    max-height: calc(100vh - 120px) !important;
-    overflow-y: auto !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
   }
   
   .photo-selection-preview h2 {
@@ -490,16 +551,27 @@
   
   /* PreviewPrint - Header lebih kompak di ukuran kecil */
   .preview-print-header {
-    margin-bottom: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
   }
   
   .preview-print-header h1 {
     font-size: 1.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  
+  .preview-print-header p {
+    font-size: 0.75rem !important;
   }
   
   /* PreviewPrint - QR Code lebih kecil di ukuran kecil */
   .preview-print-qr svg {
     width: 180px !important;
     height: 180px !important;
+  }
+  
+  /* PreviewPrint - Pastikan tidak ada scroll di ukuran kecil */
+  .preview-print-container {
+    max-height: 100% !important;
+    overflow: hidden !important;
   }
 }

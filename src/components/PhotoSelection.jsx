@@ -276,31 +276,42 @@ export default function PhotoSelection() {
     navigate("/camera", { state: { templateId } });
   };
 
+  const isShortScreen = typeof window !== 'undefined' && window.innerHeight < 650;
+  const scale = isShortScreen ? 0.85 : 1;
+
   return (
     <PageLayout>
-      <div className="container mx-auto max-w-6xl">
-        {/* Header */}
-        {/* Small tablet: Header lebih kompak untuk muat dalam satu layar */}
-        <div className="mb-8 photo-selection-header">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            className="mb-4 text-white hover:text-white/80"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <h1 className="text-3xl font-bold text-white">Pilih Satu Foto Terbaik</h1>
-          {/* <p className="text-muted-foreground mt-2 text-white">
-            Pilih satu foto yang akan digunakan untuk photostrip
-          </p> */}
-        </div>
+      <div className="flex items-center justify-center px-4 py-4">
+        <div
+          className="container mx-auto max-w-6xl photo-selection-container relative w-full"
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "center",
+          }}
+        >
+          {/* Header */}
+          {/* Small tablet: Header lebih kompak untuk muat dalam satu layar */}
+          <div className={`photo-selection-header ${isShortScreen ? 'mb-4' : 'mb-6'}`}>
+            <Button
+              variant="ghost"
+              onClick={handleBack}
+              className={`${isShortScreen ? 'mb-2' : 'mb-4'} text-white hover:text-white/80`}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <h1 className={`${isShortScreen ? 'text-2xl' : 'text-3xl'} font-bold text-white`}>
+              Pilih Satu Foto Terbaik
+            </h1>
+          </div>
 
-        {/* Grid layout: Preview selalu di sebelah kanan, mirip tampilan desktop */}
-        <div className="grid grid-cols-2 gap-8 photo-selection-grid">
+          {/* Grid layout: Preview selalu di sebelah kanan, mirip tampilan desktop */}
+          <div className="grid grid-cols-2 gap-8 photo-selection-grid">
           {/* Photo Selection */}
           <div>
-            <h2 className="text-xl font-semibold mb-4 text-white">Foto Anda</h2>
+            <h2 className={`${isShortScreen ? 'text-lg' : 'text-xl'} font-semibold ${isShortScreen ? 'mb-2' : 'mb-4'} text-white`}>
+              Foto Anda
+            </h2>
             <PhotoGrid
               photos={photos}
               selectedIndex={selectedPhotoIndex}
@@ -312,7 +323,9 @@ export default function PhotoSelection() {
           {/* Preview */}
           {/* Tablet: Preview area dengan max-height untuk memastikan tombol Print tetap terlihat */}
           <div className="photo-selection-preview">
-            <h2 className="text-xl font-semibold mb-4 text-white">Preview</h2>
+            <h2 className={`${isShortScreen ? 'text-lg' : 'text-xl'} font-semibold ${isShortScreen ? 'mb-2' : 'mb-4'} text-white`}>
+              Preview
+            </h2>
 
             {selectedPhotoIndex === null ? (
               <div className="flex items-center justify-center h-96 bg-primary/80 border-2 border-transparent rounded-2xl shadow-lg">
@@ -327,7 +340,7 @@ export default function PhotoSelection() {
               </div>
             ) : selectedPhoto && template ? (
               // Preview controls - styling mirip desktop
-              <div className="space-y-6 photo-selection-controls">
+              <div className={`${isShortScreen ? 'space-y-3' : 'space-y-4'} photo-selection-controls`}>
                 {/* Photo Preview - No editing features */}
                 <div className="photo-selection-editor">
                   <PhotoEditor
@@ -344,70 +357,63 @@ export default function PhotoSelection() {
                 </div>
 
                 {isUploading && (
-                  <div className="bg-blue-500/20 border border-blue-500 text-blue-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4 photo-selection-status">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="bg-blue-500/20 border border-blue-500 text-blue-200 p-2 rounded-lg text-xs flex items-center gap-2 photo-selection-status">
+                    <Loader2 className="h-3 w-3 animate-spin" />
                     Mengupload ke cloud...
                   </div>
                 )}
 
                 {isPrinting && (
-                  <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-3 rounded-lg text-sm flex items-center gap-2 mb-4 photo-selection-status">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-2 rounded-lg text-xs flex items-center gap-2 photo-selection-status">
+                    <Loader2 className="h-3 w-3 animate-spin" />
                     Mencetak {printCount} salinan...
                   </div>
                 )}
 
                 {printError && (
-                  <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded-lg text-sm mb-4 photo-selection-status">
+                  <div className="bg-red-500/20 border border-red-500 text-red-200 p-2 rounded-lg text-xs photo-selection-status">
                     {printError}
                   </div>
                 )}
 
-                {/* Printer Connection Status
-                <div className="flex items-center justify-center mb-4">
-                  <span className="text-sm text-white/70">
-                    Status Printer: {checkPrinterConnected() ? (
-                      <span className="text-green-400">Terhubung</span>
-                    ) : (
-                      <span className="text-red-400">Tidak Terhubung</span>
-                    )}
-                  </span>
-                </div> */}
-
                 {/* Small tablet: Mirror toggle lebih kompak */}
-                <div className="flex items-center justify-center gap-3 text-white/80 photo-selection-mirror">
+                <div className="flex items-center justify-center gap-2 text-white/80 photo-selection-mirror">
                   <button
                     type="button"
                     onClick={() => setIsMirrored((prev) => !prev)}
-                    className="relative inline-flex h-8 w-16 items-center rounded-full border border-white/20 transition-colors duration-300"
+                    className="relative inline-flex h-7 w-14 items-center rounded-full border border-white/20 transition-colors duration-300"
                     style={{ backgroundColor: isMirrored ? COLORS.PRIMARY : 'rgba(255,255,255,0.25)' }}
                   >
                     <span className="sr-only">Mirror image</span>
                     <span
-                      className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-300 ${
-                        isMirrored ? 'translate-x-8' : 'translate-x-1'
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-300 ${
+                        isMirrored ? 'translate-x-7' : 'translate-x-1'
                       }`}
                     />
                   </button>
-                  <span className="text-xs font-semibold uppercase tracking-wide">Mirror image</span>
+                  <span className={`${isShortScreen ? 'text-xs' : 'text-xs'} font-semibold uppercase tracking-wide`}>
+                    Mirror image
+                  </span>
                 </div>
 
                 {/* Print Count Control */}
                 {/* Small tablet: Print count control lebih kompak */}
-                <div className="flex flex-col items-center gap-4 photo-selection-print-count">
-                  <span className="text-sm font-medium text-white/80">Jumlah Print</span>
+                <div className={`flex flex-col items-center ${isShortScreen ? 'gap-2' : 'gap-3'} photo-selection-print-count`}>
+                  <span className={`${isShortScreen ? 'text-xs' : 'text-sm'} font-medium text-white/80`}>
+                    Jumlah Print
+                  </span>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => setPrintCount((prev) => Math.max(1, prev - 1))}
                       disabled={printCount <= 1}
-                      className="h-10 w-10 rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                      className={`${isShortScreen ? 'h-8 w-8' : 'h-10 w-10'} rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50`}
                     >
-                      <Minus className="h-4 w-4" />
+                      <Minus className={`${isShortScreen ? 'h-3 w-3' : 'h-4 w-4'}`} />
                     </Button>
                     
-                    <span className="text-2xl font-bold text-white min-w-12 text-center">
+                    <span className={`${isShortScreen ? 'text-xl' : 'text-2xl'} font-bold text-white min-w-12 text-center`}>
                       {printCount}
                     </span>
                     
@@ -416,9 +422,9 @@ export default function PhotoSelection() {
                       size="icon"
                       onClick={() => setPrintCount((prev) => Math.min(10, prev + 1))}
                       disabled={printCount >= 10}
-                      className="h-10 w-10 rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                      className={`${isShortScreen ? 'h-8 w-8' : 'h-10 w-10'} rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50`}
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className={`${isShortScreen ? 'h-3 w-3' : 'h-4 w-4'}`} />
                     </Button>
                   </div>
                 </div>
@@ -426,8 +432,8 @@ export default function PhotoSelection() {
                 {/* Small tablet: Button lebih kompak */}
                 <Button 
                   onClick={handleNext} 
-                  className="w-full photo-selection-button mt-4" 
-                  size="lg" 
+                  className={`w-full photo-selection-button ${isShortScreen ? 'mt-2' : 'mt-4'}`}
+                  size={isShortScreen ? "default" : "lg"}
                   disabled={!mergedImage || isMerging || isUploading || isPrinting}
                 >
                   {isMerging ? (
@@ -443,7 +449,7 @@ export default function PhotoSelection() {
                   )}
                 </Button>
                 {uploadError && (
-                  <p className="text-red-400 text-sm mt-2">{uploadError}</p>
+                  <p className="text-red-400 text-xs mt-1">{uploadError}</p>
                 )}
               </div>
             ) : (
@@ -454,6 +460,7 @@ export default function PhotoSelection() {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </PageLayout>

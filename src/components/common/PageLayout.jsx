@@ -20,9 +20,8 @@ export default function PageLayout({
   return (
     <div
       ref={containerRef}
-      className={`min-h-screen p-4 relative ${className}`}
+      className={`h-screen overflow-hidden relative ${className}`}
       style={{
-        overflowY: "auto",
         backgroundImage: `url(${backgroundImage})`,
         ...backgroundStyles,
       }}
