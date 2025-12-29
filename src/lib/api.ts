@@ -264,38 +264,48 @@ export async function uploadPhotosFromDataUrls(
 }
 
 /**
- * Get all photos from all sessions
+ * Get all photos from all sessions with pagination support
+ * @param limit - Maximum number of photos to return (default: 100)
+ * @param offset - Number of photos to skip for pagination (default: 0)
  * @returns Response with all photos from all sessions
  */
-export async function getAllPhotos(): Promise<{
+export async function getAllPhotos(
+  limit: number = 100,
+  offset: number = 0
+): Promise<{
   success: boolean;
-  photos?: Array<{
-    sessionId: string;
+  bucketUrl?: string;
+  count?: number;
+  total?: number;
+  limit?: number;
+  offset?: number;
+  files?: Array<{
+    name: string;
     url: string;
+    sessionId: string;
     photoIndex: string;
-    name?: string;
     contentType?: string;
     size?: string;
     timeCreated?: string;
     updated?: string;
   }>;
-  count?: number;
   message?: string;
+  error?: string;
 }> {
   try {
-    const url = `${API_BASE_URL}/photos`;
+    const url = new URL(`${API_BASE_URL}/photos`);
+    url.searchParams.append('limit', limit.toString());
+    url.searchParams.append('offset', offset.toString());
 
-    const response = await fetch(url, {
+    const response = await fetch(url.toString(), {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      credentials: 'include', // PENTING: Untuk CORS dengan credentials
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.message || `Get all photos failed: ${response.status} ${response.statusText}`
+        errorData.error || errorData.message || `Get all photos failed: ${response.status} ${response.statusText}`
       );
     }
 
@@ -319,19 +329,19 @@ export async function getAllPhotos(): Promise<{
       Backend perlu menambahkan CORS headers:
       - Access-Control-Allow-Origin: https://receiptbooth-photomate.netlify.app (atau *)
       - Access-Control-Allow-Methods: GET, POST, OPTIONS
-      - Access-Control-Allow-Headers: X-API-Key, Content-Type`;
+      - Access-Control-Allow-Credentials: true`;
       
       console.error(corsError);
       return {
         success: false,
-        photos: [],
+        files: [],
         message: `CORS Error: Backend tidak mengizinkan request dari origin ini. Silakan hubungi backend developer untuk menambahkan CORS headers.`,
       };
     }
     
     return {
       success: false,
-      photos: [],
+      files: [],
       message: errorMessage,
     };
   }

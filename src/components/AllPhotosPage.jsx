@@ -1,51 +1,101 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
-import { Download, Loader2, RefreshCw, X, Home } from "lucide-react";
+import { Download, Loader2, RefreshCw, X, Home, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import PageLayout from "./common/PageLayout";
 import { getAllPhotos } from "@/lib/api";
+import background from "@/assets/background.svg";
+
+const PHOTOS_PER_PAGE = 50;
 
 export default function AllPhotosPage() {
   const navigate = useNavigate();
   const [photos, setPhotos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   // Fetch all photos when component mounts
   useEffect(() => {
-    loadAllPhotos();
+    loadAllPhotos(0, true);
   }, []);
 
-  const loadAllPhotos = async () => {
-    setIsLoading(true);
+  const loadAllPhotos = async (currentOffset = 0, reset = false) => {
+    if (reset) {
+      setIsLoading(true);
+      setPhotos([]);
+      setOffset(0);
+    } else {
+      setIsLoadingMore(true);
+    }
     setError(null);
+    
     try {
-      const result = await getAllPhotos();
+      const result = await getAllPhotos(PHOTOS_PER_PAGE, currentOffset);
       
-      if (result && result.success && result.photos && result.photos.length > 0) {
-        // Sort photos by timeCreated (newest first) or by sessionId
-        const sortedPhotos = [...result.photos].sort((a, b) => {
+      if (result && result.success && result.files && result.files.length > 0) {
+        // Sort photos by timeCreated (newest first) - chronological order
+        const sortedPhotos = [...result.files].sort((a, b) => {
           if (a.timeCreated && b.timeCreated) {
-            return new Date(b.timeCreated) - new Date(a.timeCreated);
+            return new Date(b.timeCreated).getTime() - new Date(a.timeCreated).getTime();
           }
-          return b.sessionId.localeCompare(a.sessionId);
+          // If no timestamp, maintain original order
+          return 0;
         });
 
-        setPhotos(sortedPhotos);
-        console.log("All photos loaded:", sortedPhotos.length);
+        if (reset) {
+          setPhotos(sortedPhotos);
+        } else {
+          // Merge and re-sort to maintain chronological order
+          setPhotos(prev => {
+            const merged = [...prev, ...sortedPhotos];
+            return merged.sort((a, b) => {
+              if (a.timeCreated && b.timeCreated) {
+                return new Date(b.timeCreated).getTime() - new Date(a.timeCreated).getTime();
+              }
+              return 0;
+            });
+          });
+        }
+        
+        setTotal(result.total || result.count || sortedPhotos.length);
+        const newOffset = currentOffset + sortedPhotos.length;
+        setOffset(newOffset);
+        setHasMore(result.total ? newOffset < result.total : sortedPhotos.length === PHOTOS_PER_PAGE);
+        
+        console.log("Photos loaded:", {
+          current: reset ? sortedPhotos.length : photos.length + sortedPhotos.length,
+          total: result.total || result.count,
+          hasMore: result.total ? newOffset < result.total : sortedPhotos.length === PHOTOS_PER_PAGE
+        });
       } else {
-        setPhotos([]);
-        if (result && result.message) {
-          setError(result.message);
+        if (reset) {
+          setPhotos([]);
+        }
+        setHasMore(false);
+        if (result && (result.message || result.error)) {
+          setError(result.message || result.error);
         }
       }
     } catch (err) {
       console.error("Error loading all photos:", err);
       setError(err.message || "Failed to load photos");
-      setPhotos([]);
+      if (reset) {
+        setPhotos([]);
+      }
+      setHasMore(false);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadAllPhotos(offset, false);
     }
   };
 
@@ -89,22 +139,20 @@ export default function AllPhotosPage() {
       : null;
 
   const handleRefresh = async () => {
-    await loadAllPhotos();
+    await loadAllPhotos(0, true);
   };
 
-  // Group photos by sessionId
-  const photosBySession = photos.reduce((acc, photo) => {
-    if (!acc[photo.sessionId]) {
-      acc[photo.sessionId] = [];
-    }
-    acc[photo.sessionId].push(photo);
-    return acc;
-  }, {});
-
-  const sessionCount = Object.keys(photosBySession).length;
-
   return (
-    <PageLayout className="flex flex-col items-center py-4 sm:py-6" showLockButton={false}>
+    <div 
+      className="flex flex-col items-center py-4 sm:py-6 min-h-screen w-full overflow-y-auto relative"
+      style={{
+        backgroundImage: `url(${background})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <div className="container mx-auto max-w-6xl px-4 sm:px-6 text-center w-full">
         {/* Header with Home button */}
         <div className="flex items-center justify-between mb-4">
@@ -124,7 +172,7 @@ export default function AllPhotosPage() {
         </div>
 
         <p className="text-xs sm:text-sm mt-3 max-w-xl mx-auto text-white/80 px-2">
-          Total: {photos.length} photos from {sessionCount} session{sessionCount !== 1 ? 's' : ''}
+          Showing {photos.length} of {total || photos.length} photos
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-5 px-2">
@@ -178,62 +226,59 @@ export default function AllPhotosPage() {
           </div>
         )}
 
-        {/* Photos Grid - Grouped by Session */}
+        {/* Photos Grid */}
         {photos.length > 0 && (
           <div className="mt-6 sm:mt-10 w-full">
-            {Object.entries(photosBySession).map(([sessionId, sessionPhotos]) => (
-              <div key={sessionId} className="mb-8">
-                <h2 className="mb-3 sm:mb-4 text-base sm:text-lg font-medium text-white px-2 text-left">
-                  Session: {sessionId} ({sessionPhotos.length} photos)
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 px-2 sm:px-0">
-                  {sessionPhotos.map((photo, index) => {
-                    const isGif = photo.url.toLowerCase().includes('.gif') || 
-                                 photo.photoIndex === 'gif' ||
-                                 photo.contentType === 'image/gif';
-                    const label = isGif
-                      ? 'GIF'
-                      : `Photo ${photo.photoIndex || index + 1}`;
-
-                    return (
-                      <div
-                        key={`${photo.sessionId}-${photo.url}-${index}`}
-                        className="relative w-full aspect-square cursor-pointer group overflow-hidden rounded-lg drop-shadow-xl bg-white/10 border border-white/10"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          const globalIndex = photos.findIndex(p => 
-                            p.sessionId === photo.sessionId && p.url === photo.url
-                          );
-                          setActivePhotoIndex(globalIndex);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            const globalIndex = photos.findIndex(p => 
-                              p.sessionId === photo.sessionId && p.url === photo.url
-                            );
-                            setActivePhotoIndex(globalIndex);
-                          }
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/25" />
-                        <img
-                          src={photo.url}
-                          alt={label}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:opacity-80"
-                          loading="lazy"
-                        />
-
-                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 sm:px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
-                          {label}
-                        </span>
-                      </div>
-                    );
-                  })}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 px-2 sm:px-0">
+              {photos.map((photo, index) => (
+                <div
+                  key={`${photo.url}-${index}`}
+                  className="relative w-full aspect-square cursor-pointer group overflow-hidden rounded-xl bg-white/5 transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setActivePhotoIndex(index)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setActivePhotoIndex(index);
+                    }
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
+                  <img
+                    src={photo.url}
+                    alt={`Photo ${index + 1}`}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
                 </div>
+              ))}
+            </div>
+            
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="mt-8 flex justify-center">
+                <Button
+                  onClick={loadMore}
+                  variant="outline"
+                  className="px-6 py-2 text-sm"
+                  size="lg"
+                  disabled={isLoadingMore}
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="mr-2 h-4 w-4" />
+                      LOAD MORE
+                    </>
+                  )}
+                </Button>
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -267,11 +312,6 @@ export default function AllPhotosPage() {
                 <X className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
-            <div className="absolute left-4 top-4 sm:left-6 sm:top-6 text-white text-xs sm:text-sm">
-              <p className="bg-black/60 px-3 py-2 rounded-lg">
-                Session: {activePhoto.sessionId}
-              </p>
-            </div>
             <div
               className="relative w-full max-w-4xl"
               onClick={(event) => event.stopPropagation()}
@@ -285,7 +325,7 @@ export default function AllPhotosPage() {
           </div>
         )}
       </div>
-    </PageLayout>
+    </div>
   );
 }
 
