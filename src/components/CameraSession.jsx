@@ -15,6 +15,7 @@ export default function CameraSession() {
   const navigate = useNavigate();
   const location = useLocation();
   const templateId = location.state?.templateId;
+  const printCount = location.state?.printCount || 1;
 
   const [photos, setPhotos] = useState([]);
   const [delay] = useState(5);
@@ -262,20 +263,20 @@ export default function CameraSession() {
   const handleComplete = () => {
     if (photos.length === CONFIG.MAX_PHOTOS) {
       navigate("/select-photo", {
-        state: { templateId, photos },
+        state: { templateId, photos, printCount },
       });
     }
   };
 
   const handleBack = () => {
     stopCamera();
-    navigate("/templates");
+    navigate("/templates", { state: { printCount } });
   };
 
   const handleNext = () => {
     if (photos.length === 1) {
       navigate("/select-photo", {
-        state: { templateId, photos },
+        state: { templateId, photos, printCount },
       });
     }
   };

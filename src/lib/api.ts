@@ -262,3 +262,78 @@ export async function uploadPhotosFromDataUrls(
 
   return uploadFiles(files, sessionId);
 }
+
+/**
+ * Get all photos from all sessions
+ * @returns Response with all photos from all sessions
+ */
+export async function getAllPhotos(): Promise<{
+  success: boolean;
+  photos?: Array<{
+    sessionId: string;
+    url: string;
+    photoIndex: string;
+    name?: string;
+    contentType?: string;
+    size?: string;
+    timeCreated?: string;
+    updated?: string;
+  }>;
+  count?: number;
+  message?: string;
+}> {
+  try {
+    const url = `${API_BASE_URL}/photos`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `Get all photos failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Get all photos error:", error);
+    
+    // Check for CORS error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isCorsError = errorMessage.includes('CORS') || 
+                       errorMessage.includes('Access-Control') ||
+                       (error instanceof TypeError && (
+                         errorMessage.includes('Failed to fetch') ||
+                         errorMessage.includes('NetworkError') ||
+                         errorMessage.includes('Network request failed')
+                       ));
+    
+    if (isCorsError) {
+      const corsError = `CORS Error: Backend di ${API_BASE_URL} tidak mengizinkan request dari origin ini. 
+      Backend perlu menambahkan CORS headers:
+      - Access-Control-Allow-Origin: https://receiptbooth-photomate.netlify.app (atau *)
+      - Access-Control-Allow-Methods: GET, POST, OPTIONS
+      - Access-Control-Allow-Headers: X-API-Key, Content-Type`;
+      
+      console.error(corsError);
+      return {
+        success: false,
+        photos: [],
+        message: `CORS Error: Backend tidak mengizinkan request dari origin ini. Silakan hubungi backend developer untuk menambahkan CORS headers.`,
+      };
+    }
+    
+    return {
+      success: false,
+      photos: [],
+      message: errorMessage,
+    };
+  }
+}

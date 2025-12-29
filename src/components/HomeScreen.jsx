@@ -30,7 +30,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleStart = () => {
-    navigate("/templates");
+    navigate("/payment");
   };
 
   const handleSettingsClick = () => {

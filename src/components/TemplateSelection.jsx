@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { generateSessionId } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
@@ -36,6 +36,8 @@ const templates = importedTemplates && importedTemplates.length > 0 ? importedTe
 
 export default function TemplateSelection() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const printCount = location.state?.printCount || 1; // Default to 1 if not provided
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const containerRef = useRef(null);
 
@@ -49,12 +51,12 @@ export default function TemplateSelection() {
 
   const handleNext = () => {
     if (selectedTemplate) {
-      navigate("/camera", { state: { templateId: selectedTemplate } });
+      navigate("/camera", { state: { templateId: selectedTemplate, printCount } });
     }
   };
 
   const handleBack = () => {
-    navigate("/");
+    navigate("/payment", { state: { printCount } });
   };
 
   if (!templates || templates.length === 0) {

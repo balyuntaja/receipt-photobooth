@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
-import { ArrowLeft, Loader2, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { templates } from "@/lib/templates";
 import { mergePhotoWithTemplate } from "@/lib/image-processing";
 import { calculatePhotoPosition } from "@/lib/utils";
@@ -17,7 +17,8 @@ import PhotoEditor from "./common/PhotoEditor";
 export default function PhotoSelection() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { templateId, photos } = location.state || {};
+  const { templateId, photos, printCount: initialPrintCount } = location.state || {};
+  const printCount = initialPrintCount || 1; // Get from state, default to 1
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -29,7 +30,6 @@ export default function PhotoSelection() {
   const [isUploading, setIsUploading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isMirrored, setIsMirrored] = useState(false);
-  const [printCount, setPrintCount] = useState(1); // Jumlah print, default 1
   const [printError, setPrintError] = useState(null);
 
   // Photo editor state (position and scale)
@@ -273,7 +273,7 @@ export default function PhotoSelection() {
   };
 
   const handleBack = () => {
-    navigate("/camera", { state: { templateId } });
+    navigate("/camera", { state: { templateId, printCount } });
   };
 
   const isShortScreen = typeof window !== 'undefined' && window.innerHeight < 650;
@@ -396,36 +396,15 @@ export default function PhotoSelection() {
                   </span>
                 </div>
 
-                {/* Print Count Control */}
-                {/* Small tablet: Print count control lebih kompak */}
-                <div className={`flex flex-col items-center ${isShortScreen ? 'gap-2' : 'gap-3'} photo-selection-print-count`}>
+                {/* Print Count Display (Read-only) */}
+                <div className={`flex flex-col items-center ${isShortScreen ? 'gap-2' : 'gap-3'}`}>
                   <span className={`${isShortScreen ? 'text-xs' : 'text-sm'} font-medium text-white/80`}>
                     Jumlah Print
                   </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setPrintCount((prev) => Math.max(1, prev - 1))}
-                      disabled={printCount <= 1}
-                      className={`${isShortScreen ? 'h-8 w-8' : 'h-10 w-10'} rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50`}
-                    >
-                      <Minus className={`${isShortScreen ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                    </Button>
-                    
-                    <span className={`${isShortScreen ? 'text-xl' : 'text-2xl'} font-bold text-white min-w-12 text-center`}>
+                  <div className="flex items-center justify-center">
+                    <span className={`${isShortScreen ? 'text-2xl' : 'text-3xl'} font-bold text-white`}>
                       {printCount}
                     </span>
-                    
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setPrintCount((prev) => Math.min(10, prev + 1))}
-                      disabled={printCount >= 10}
-                      className={`${isShortScreen ? 'h-8 w-8' : 'h-10 w-10'} rounded-full border-2 border-white/30 text-white bg-white/10 hover:bg-white/20 disabled:opacity-50`}
-                    >
-                      <Plus className={`${isShortScreen ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                    </Button>
                   </div>
                 </div>
                 
