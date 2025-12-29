@@ -289,7 +289,6 @@ export async function getAllPhotos(): Promise<{
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
       },
     });
 
