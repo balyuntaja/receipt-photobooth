@@ -1,5 +1,16 @@
 // Camera utility functions - Optimized for Android low-end devices (Itel VistaTab 11)
 
+// IP Camera identifier and URL
+export const IP_CAMERA_ID = "ip-camera-localhost-8080";
+export const IP_CAMERA_URL = "http://localhost:8080";
+
+/**
+ * Check if deviceId is an IP camera
+ */
+export function isIPCamera(deviceId: string | null): boolean {
+  return deviceId === IP_CAMERA_ID;
+}
+
 /**
  * Request camera permission first (required for enumerateDevices to work properly on Android)
  */
@@ -63,8 +74,24 @@ export async function enumerateCameras(): Promise<MediaDeviceInfo[]> {
 }
 
 /**
+ * Detect USB webcam by checking label for USB/UVC/NYK keywords
+ * Priority: saved deviceId > USB webcam > front camera > any camera
+ */
+function detectUSBWebcam(cameras: MediaDeviceInfo[]): MediaDeviceInfo | null {
+  for (const cam of cameras) {
+    const label = (cam.label || "").toLowerCase();
+    // Check for USB webcam indicators (case-insensitive)
+    if (label.includes("uvc") || label.includes("usb") || label.includes("nyk")) {
+      console.log("USB webcam detected:", cam.label);
+      return cam;
+    }
+  }
+  return null;
+}
+
+/**
  * Find the best available camera device
- * Priority: saved deviceId > front camera > any camera
+ * Priority: saved deviceId > USB webcam > front camera > any camera
  */
 async function findBestCamera(savedDeviceId: string | null): Promise<MediaDeviceInfo | null> {
   const cameras = await enumerateCameras();
@@ -75,7 +102,7 @@ async function findBestCamera(savedDeviceId: string | null): Promise<MediaDevice
   }
 
   // Try saved deviceId first
-  if (savedDeviceId) {
+  if (savedDeviceId && !isIPCamera(savedDeviceId)) {
     const savedCamera = cameras.find(cam => cam.deviceId === savedDeviceId);
     if (savedCamera) {
       console.log("Using saved camera deviceId");
@@ -86,7 +113,14 @@ async function findBestCamera(savedDeviceId: string | null): Promise<MediaDevice
     }
   }
 
-  // Try to find front camera (usually labeled as "front" or "user")
+  // Priority 2: Detect USB webcam (NYK NEMESIS or other UVC cameras)
+  const usbWebcam = detectUSBWebcam(cameras);
+  if (usbWebcam) {
+    console.log("Using USB webcam:", usbWebcam.label);
+    return usbWebcam;
+  }
+
+  // Priority 3: Try to find front camera (usually labeled as "front" or "user")
   const frontCamera = cameras.find(cam => 
     cam.label.toLowerCase().includes("front") || 
     cam.label.toLowerCase().includes("user") ||
@@ -126,6 +160,15 @@ async function tryGetCameraStream(constraints: MediaTrackConstraints): Promise<M
 export async function requestCameraAccess(): Promise<MediaStream | null> {
   console.log("Starting camera access request...");
 
+  const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+
+  // Check if IP camera is selected
+  if (isIPCamera(savedDeviceId)) {
+    console.log("IP Camera selected, returning null (will use video src)");
+    // Return null to indicate IP camera (will be handled by video element src)
+    return null;
+  }
+
   // Check if MediaDevices API is available
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     const errorMsg = "Browser tidak mendukung akses kamera. Gunakan browser modern (Chrome, Firefox, Safari, Edge).";
@@ -133,19 +176,16 @@ export async function requestCameraAccess(): Promise<MediaStream | null> {
     throw new Error(errorMsg);
   }
 
-  const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
-
   // Strategy 1: Try with saved deviceId if available
-  if (savedDeviceId) {
+  if (savedDeviceId && !isIPCamera(savedDeviceId)) {
     console.log("Attempting to use saved camera deviceId...");
     const cameras = await enumerateCameras();
     const savedCamera = cameras.find(cam => cam.deviceId === savedDeviceId);
     
     if (savedCamera) {
+      // Use exact deviceId constraint to ensure correct device selection on Android
       const stream = await tryGetCameraStream({
         deviceId: { exact: savedDeviceId },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
       });
       
       if (stream) {
@@ -161,50 +201,38 @@ export async function requestCameraAccess(): Promise<MediaStream | null> {
     }
   }
 
-  // Strategy 2: Find best camera and try with deviceId
+  // Strategy 2: Find best camera (USB webcam detection happens here)
   console.log("Finding best available camera...");
   const bestCamera = await findBestCamera(savedDeviceId);
   
   if (bestCamera && bestCamera.deviceId) {
-    console.log("Attempting to use camera with deviceId:", bestCamera.deviceId.substring(0, 20) + "...");
+    console.log("Attempting to use camera with deviceId:", bestCamera.deviceId.substring(0, 20) + "...", "Label:", bestCamera.label);
     
-    // Try with exact deviceId first
-    let stream = await tryGetCameraStream({
+    // Always use exact deviceId constraint for USB webcam and saved cameras
+    // This ensures Android Chrome selects the correct device instead of defaulting to built-in camera
+    const stream = await tryGetCameraStream({
       deviceId: { exact: bestCamera.deviceId },
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
     });
     
     if (stream) {
-      console.log("Successfully opened camera with deviceId");
+      console.log("Successfully opened camera with exact deviceId");
       // Save successful deviceId
       localStorage.setItem("photobooth_selectedCameraId", bestCamera.deviceId);
       return stream;
     }
 
-    // Try with ideal deviceId (less strict)
-    stream = await tryGetCameraStream({
+    // Fallback: Try with ideal deviceId (less strict) if exact fails
+    const fallbackStream = await tryGetCameraStream({
       deviceId: { ideal: bestCamera.deviceId },
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
     });
     
-    if (stream) {
+    if (fallbackStream) {
       console.log("Successfully opened camera with ideal deviceId");
       localStorage.setItem("photobooth_selectedCameraId", bestCamera.deviceId);
-      return stream;
+      return fallbackStream;
     }
 
-    // Try with just deviceId (no constraints)
-    stream = await tryGetCameraStream({
-      deviceId: bestCamera.deviceId,
-    });
-    
-    if (stream) {
-      console.log("Successfully opened camera with basic deviceId");
-      localStorage.setItem("photobooth_selectedCameraId", bestCamera.deviceId);
-      return stream;
-    }
+    console.warn("Failed to open camera with deviceId, will try other strategies");
   }
 
   // Strategy 3: Try with facingMode (if supported)

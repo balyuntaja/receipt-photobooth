@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { requestCameraAccess, reinitializeCamera, stopCameraStream } from "@/lib/camera";
+import { requestCameraAccess, reinitializeCamera, stopCameraStream, isIPCamera, IP_CAMERA_URL } from "@/lib/camera";
 
 /**
  * Custom hook for managing camera stream
@@ -22,7 +22,54 @@ export function useCamera(cameraFacingMode = "user") {
         setRetryCount(prev => prev + 1);
       }
 
-      // Use the improved camera access function
+      const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+      
+      // Check if IP camera is selected
+      if (isIPCamera(savedDeviceId)) {
+        console.log("Using IP Camera:", IP_CAMERA_URL);
+        if (videoRef.current) {
+          videoRef.current.src = IP_CAMERA_URL;
+          videoRef.current.srcObject = null; // Clear srcObject when using src
+          videoRef.current.load();
+          
+          // Wait for video to load
+          await new Promise((resolve, reject) => {
+            if (!videoRef.current) {
+              reject(new Error("Video element not available"));
+              return;
+            }
+            
+            const handleLoadedData = () => {
+              videoRef.current?.removeEventListener("loadeddata", handleLoadedData);
+              videoRef.current?.removeEventListener("error", handleError);
+              resolve();
+            };
+            
+            const handleError = (e) => {
+              videoRef.current?.removeEventListener("loadeddata", handleLoadedData);
+              videoRef.current?.removeEventListener("error", handleError);
+              reject(new Error(`Failed to load IP camera: ${e.message || "Unknown error"}`));
+            };
+            
+            videoRef.current.addEventListener("loadeddata", handleLoadedData);
+            videoRef.current.addEventListener("error", handleError);
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+              videoRef.current?.removeEventListener("loadeddata", handleLoadedData);
+              videoRef.current?.removeEventListener("error", handleError);
+              reject(new Error("IP camera connection timeout"));
+            }, 5000);
+          });
+        }
+        
+        console.log("IP Camera started successfully");
+        setIsLoading(false);
+        setRetryCount(0);
+        return;
+      }
+
+      // Use the improved camera access function for regular cameras
       const stream = await requestCameraAccess();
       
       if (!stream) {
@@ -32,6 +79,11 @@ export function useCamera(cameraFacingMode = "user") {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.src = ""; // Clear src when using srcObject
+        // Explicitly call play() for Android Chrome compatibility
+        videoRef.current.play().catch(err => {
+          console.warn("Video play() failed:", err);
+        });
       }
       
       console.log("Camera started successfully");
@@ -104,6 +156,14 @@ export function useCamera(cameraFacingMode = "user") {
 
   const retryCamera = async () => {
     console.log("Retrying camera access...");
+    const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+    
+    // For IP camera, just restart
+    if (isIPCamera(savedDeviceId)) {
+      await startCamera(true);
+      return;
+    }
+    
     // Use reinitialize function for retry
     try {
       const stream = await reinitializeCamera();
@@ -111,6 +171,11 @@ export function useCamera(cameraFacingMode = "user") {
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          videoRef.current.src = ""; // Clear src when using srcObject
+          // Explicitly call play() for Android Chrome compatibility
+          videoRef.current.play().catch(err => {
+            console.warn("Video play() failed:", err);
+          });
         }
         console.log("Camera reinitialized successfully");
         setError(null);
@@ -130,6 +195,16 @@ export function useCamera(cameraFacingMode = "user") {
     if (streamRef.current) {
       stopCameraStream(streamRef.current);
       streamRef.current = null;
+    }
+    // Also stop IP camera if active
+    if (videoRef.current) {
+      const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+      if (isIPCamera(savedDeviceId)) {
+        videoRef.current.src = "";
+        videoRef.current.pause();
+      } else {
+        videoRef.current.srcObject = null;
+      }
     }
   };
 

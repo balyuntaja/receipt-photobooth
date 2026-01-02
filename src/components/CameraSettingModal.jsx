@@ -2,6 +2,10 @@ import { useEffect, useState, useRef } from "react";
 import { connectPrinter, isPrinterConnected as checkPrinterConnected } from "@/lib/printer";
 import { Button } from "@/components/ui/Button";
 
+// IP Camera identifier
+const IP_CAMERA_ID = "ip-camera-localhost-8080";
+const IP_CAMERA_URL = "http://localhost:8080";
+
 export default function CameraSettingModal({ open, onClose }) {
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
@@ -10,21 +14,58 @@ export default function CameraSettingModal({ open, onClose }) {
   const streamRef = useRef(null);
 
   // Detect available cameras
+  // On Android, we need to request permission first to unlock device labels
   useEffect(() => {
     if (!open) return;
 
-    navigator.mediaDevices.enumerateDevices().then((devs) => {
-      const cameras = devs.filter((d) => d.kind === "videoinput");
-      setDevices(cameras);
-      
-      // Load saved camera preference
-      const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
-      if (savedDeviceId && cameras.find(cam => cam.deviceId === savedDeviceId)) {
-        setSelectedDeviceId(savedDeviceId);
-      } else if (cameras.length > 0) {
-        setSelectedDeviceId(cameras[0].deviceId);
+    const enumerateCameras = async () => {
+      try {
+        // Step 1: Request permission first (required for Android to return deviceId with labels)
+        const permissionStream = await navigator.mediaDevices.getUserMedia({ 
+          video: true,
+          audio: false 
+        });
+        // Stop the stream immediately - we just needed permission
+        permissionStream.getTracks().forEach(track => track.stop());
+        
+        // Step 2: Wait a bit for permission to propagate (Android quirk)
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Step 3: Enumerate devices
+        const devs = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devs.filter((d) => d.kind === "videoinput");
+        setDevices(cameras);
+        
+        // Load saved camera preference
+        const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+        if (savedDeviceId === IP_CAMERA_ID) {
+          // IP camera is saved
+          setSelectedDeviceId(IP_CAMERA_ID);
+        } else if (savedDeviceId && cameras.find(cam => cam.deviceId === savedDeviceId)) {
+          setSelectedDeviceId(savedDeviceId);
+        } else if (cameras.length > 0) {
+          setSelectedDeviceId(cameras[0].deviceId);
+        } else {
+          // If no cameras found, default to IP camera
+          setSelectedDeviceId(IP_CAMERA_ID);
+        }
+      } catch (error) {
+        console.error("Error enumerating cameras:", error);
+        // Fallback: try enumerate without permission (may not have labels)
+        try {
+          const devs = await navigator.mediaDevices.enumerateDevices();
+          const cameras = devs.filter((d) => d.kind === "videoinput");
+          setDevices(cameras);
+          if (cameras.length > 0) {
+            setSelectedDeviceId(cameras[0].deviceId);
+          }
+        } catch (fallbackError) {
+          console.error("Fallback enumeration also failed:", fallbackError);
+        }
       }
-    });
+    };
+
+    enumerateCameras();
   }, [open]);
 
   // Start camera preview when device changes
@@ -34,21 +75,49 @@ export default function CameraSettingModal({ open, onClose }) {
     // Stop stream sebelumnya jika ada
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
 
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { deviceId: { exact: selectedDeviceId } },
-      })
-      .then((stream) => {
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      })
-      .catch((err) => console.error(err));
+    // Clear video srcObject
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    // Check if IP camera is selected
+    if (selectedDeviceId === IP_CAMERA_ID) {
+      // Use IP camera stream
+      if (videoRef.current) {
+        videoRef.current.src = IP_CAMERA_URL;
+        videoRef.current.load();
+      }
+    } else {
+      // Use regular camera via getUserMedia
+      navigator.mediaDevices
+        .getUserMedia({
+          video: { deviceId: { exact: selectedDeviceId } },
+        })
+        .then((stream) => {
+          streamRef.current = stream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.src = ""; // Clear src when using srcObject
+            // Explicitly call play() for Android Chrome compatibility
+            videoRef.current.play().catch(err => {
+              console.warn("Video play() failed:", err);
+            });
+          }
+        })
+        .catch((err) => console.error(err));
+    }
 
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.src = "";
+        videoRef.current.srcObject = null;
       }
     };
   }, [selectedDeviceId, open]);
@@ -97,14 +166,24 @@ export default function CameraSettingModal({ open, onClose }) {
           }}
           className="border w-full p-2 rounded mb-4"
         >
-          {devices.map((cam, i) => (
-            <option key={cam.deviceId} value={cam.deviceId}>
-              {cam.label || `Camera ${i + 1}`}
-            </option>
-          ))}
+          {/* IP Camera option */}
+          <option value={IP_CAMERA_ID}>IP Camera (localhost:8080)</option>
+          {/* Regular cameras */}
+          {devices.map((cam, i) => {
+            const label = cam.label || `Camera ${i + 1}`;
+            const isUSB = label.toLowerCase().includes("uvc") || 
+                         label.toLowerCase().includes("usb") || 
+                         label.toLowerCase().includes("nyk");
+            const displayLabel = isUSB ? `🔌 ${label}` : label;
+            return (
+              <option key={cam.deviceId} value={cam.deviceId}>
+                {displayLabel}
+              </option>
+            );
+          })}
         </select>
         {/* Video Preview */}
-        <video ref={videoRef} autoPlay playsInline className="w-full rounded mb-4" />
+        <video ref={videoRef} autoPlay playsInline muted className="w-full rounded mb-4" />
         
         {/* Printer Connection Section */}
         <div className="border-t pt-4 mt-4">
