@@ -58,11 +58,11 @@ export async function startCameraStream(deviceId?: string | null): Promise<Media
     console.log("[Camera] Android detected - using facingMode: environment");
     
     try {
-      // Use environment (back camera) with 3:4 aspect ratio for photobooth
+      // Use environment (back camera) with 4:3 aspect ratio for photobooth
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          aspectRatio: 3 / 4
+          aspectRatio: 4 / 3
         },
         audio: false
       });
@@ -75,7 +75,7 @@ export async function startCameraStream(deviceId?: string | null): Promise<Media
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: "user",
-            aspectRatio: 3 / 4
+            aspectRatio: 4 / 3
           },
           audio: false
         });
@@ -102,7 +102,7 @@ export async function startCameraStream(deviceId?: string | null): Promise<Media
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           deviceId: { ideal: deviceId }, // Use ideal, not exact (more forgiving)
-          aspectRatio: 3 / 4
+          aspectRatio: 4 / 3
         },
         audio: false
       });
@@ -118,7 +118,7 @@ export async function startCameraStream(deviceId?: string | null): Promise<Media
   console.log("[Camera] Using default camera selection");
   const stream = await navigator.mediaDevices.getUserMedia({
     video: {
-      aspectRatio: 3 / 4
+      aspectRatio: 4 / 3
     },
     audio: false
   });

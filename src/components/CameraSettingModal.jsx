@@ -83,14 +83,14 @@ export default function CameraSettingModal({ open, onClose }) {
         ? {
             video: {
               facingMode: "environment",
-              aspectRatio: 3 / 4
+              aspectRatio: 4 / 3
             },
             audio: false
           }
         : {
             video: {
               deviceId: selectedDeviceId ? { ideal: selectedDeviceId } : true,
-              aspectRatio: 3 / 4
+              aspectRatio: 4 / 3
             },
             audio: false
           };
@@ -185,8 +185,16 @@ export default function CameraSettingModal({ open, onClose }) {
             ))
           )}
         </select>
-        {/* Video Preview */}
-        <video ref={videoRef} autoPlay playsInline muted className="w-full rounded mb-4" />
+        {/* Video Preview dengan aspect ratio 4:3 (landscape) */}
+        <div className="relative w-full mb-4" style={{ aspectRatio: "4/3" }}>
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className="w-full h-full object-cover rounded" 
+          />
+        </div>
         
         {/* Printer Connection Section */}
         <div className="border-t pt-4 mt-4">

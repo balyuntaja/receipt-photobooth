@@ -389,7 +389,7 @@ export default function CameraSession() {
         {/* LEFT COLUMN - Camera View (2 bagian) */}
         {/* Tablet: Kolom kiri lebih kompak, mengurangi spacing */}
         <div className="col-span-2 flex flex-col items-center">
-          {/* Tablet: Video preview lebih kecil untuk muat dalam satu layar */}
+          {/* Tablet: Video preview dengan aspect ratio 4:3 (landscape) untuk photobooth */}
           <div className="relative w-full camera-session-video" style={{ aspectRatio: "4/3" }}>
             <video
               ref={videoRef}
