@@ -13,6 +13,7 @@ export function isIPCamera(deviceId: string | null): boolean {
 
 /**
  * Request camera permission first (required for enumerateDevices to work properly on Android)
+ * On Android, this unlocks device labels and makes USB webcams detectable
  */
 async function requestCameraPermission(): Promise<boolean> {
   try {
@@ -34,36 +35,75 @@ async function requestCameraPermission(): Promise<boolean> {
 /**
  * Enumerate all available camera devices with proper permission handling
  * This function ensures permission is granted before enumerating (required for Android)
+ * On Android, USB webcams may need multiple enumeration attempts to be detected
  */
 export async function enumerateCameras(): Promise<MediaDeviceInfo[]> {
   try {
-    // Step 1: Request permission first (required for Android to return deviceId)
+    // Step 1: Request permission first (required for Android to return deviceId with labels)
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
       console.warn("No camera permission, cannot enumerate devices");
       return [];
     }
 
-    // Step 2: Wait a bit for permission to propagate (Android quirk)
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Step 2: Wait longer for permission to propagate (Android quirk - USB devices need more time)
+    // Increased delay to 500ms to ensure USB webcam is detected
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Step 3: Enumerate devices
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const cameras = devices.filter(device => device.kind === "videoinput");
+    // Step 3: Enumerate devices multiple times (Android sometimes needs retry for USB devices)
+    let allCameras: MediaDeviceInfo[] = [];
+    const seenDeviceIds = new Set<string>();
     
-    console.log(`Found ${cameras.length} camera(s):`, 
-      cameras.map(cam => ({
+    // Try enumerating 3 times with delays to catch USB webcams that appear later
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(device => device.kind === "videoinput");
+        
+        // Add new cameras that we haven't seen before
+        cameras.forEach(cam => {
+          if (cam.deviceId && cam.deviceId !== "" && !seenDeviceIds.has(cam.deviceId)) {
+            seenDeviceIds.add(cam.deviceId);
+            allCameras.push(cam);
+          }
+        });
+        
+        // Wait a bit before next attempt (USB devices may appear with delay)
+        if (attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      } catch (err) {
+        console.warn(`Enumeration attempt ${attempt + 1} failed:`, err);
+      }
+    }
+    
+    console.log(`Found ${allCameras.length} camera(s) after ${3} attempts:`, 
+      allCameras.map(cam => ({
         deviceId: cam.deviceId.substring(0, 20) + "...",
         label: cam.label || "Unnamed camera",
-        hasLabel: !!cam.label
+        hasLabel: !!cam.label,
+        isUSB: (cam.label || "").toLowerCase().includes("uvc") || 
+               (cam.label || "").toLowerCase().includes("usb") || 
+               (cam.label || "").toLowerCase().includes("nyk")
       }))
     );
 
     // Check if we have deviceId (not just empty strings)
-    const validCameras = cameras.filter(cam => cam.deviceId && cam.deviceId !== "");
+    const validCameras = allCameras.filter(cam => cam.deviceId && cam.deviceId !== "");
     
     if (validCameras.length === 0) {
-      console.warn("No valid camera deviceId found - may need to open camera app first");
+      console.warn("No valid camera deviceId found - may need to open camera app first or check USB connection");
+    } else {
+      // Log USB webcam detection status
+      const usbCameras = validCameras.filter(cam => {
+        const label = (cam.label || "").toLowerCase();
+        return label.includes("uvc") || label.includes("usb") || label.includes("nyk");
+      });
+      if (usbCameras.length > 0) {
+        console.log(`✅ USB webcam(s) detected: ${usbCameras.map(c => c.label).join(", ")}`);
+      } else {
+        console.log("⚠️ No USB webcam detected - only built-in camera found");
+      }
     }
 
     return validCameras;

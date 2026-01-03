@@ -3,8 +3,8 @@ import { connectPrinter, isPrinterConnected as checkPrinterConnected } from "@/l
 import { Button } from "@/components/ui/Button";
 
 // IP Camera identifier
-const IP_CAMERA_ID = "ip-camera-localhost-8080";
-const IP_CAMERA_URL = "http://localhost:8080";
+const IP_CAMERA_ID = "ip-camera-localhost-1024";
+const IP_CAMERA_URL = "http://localhost:1024";
 
 export default function CameraSettingModal({ open, onClose }) {
   const [devices, setDevices] = useState([]);
@@ -15,6 +15,7 @@ export default function CameraSettingModal({ open, onClose }) {
 
   // Detect available cameras
   // On Android, we need to request permission first to unlock device labels
+  // USB webcams may need multiple enumeration attempts to be detected
   useEffect(() => {
     if (!open) return;
 
@@ -28,23 +29,74 @@ export default function CameraSettingModal({ open, onClose }) {
         // Stop the stream immediately - we just needed permission
         permissionStream.getTracks().forEach(track => track.stop());
         
-        // Step 2: Wait a bit for permission to propagate (Android quirk)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Step 2: Wait longer for permission to propagate (Android quirk - USB devices need more time)
+        // Increased delay to 500ms to ensure USB webcam is detected
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Step 3: Enumerate devices
-        const devs = await navigator.mediaDevices.enumerateDevices();
-        const cameras = devs.filter((d) => d.kind === "videoinput");
-        setDevices(cameras);
+        // Step 3: Enumerate devices multiple times (Android sometimes needs retry for USB devices)
+        let allCameras = [];
+        const seenDeviceIds = new Set();
+        
+        // Try enumerating 3 times with delays to catch USB webcams that appear later
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const devs = await navigator.mediaDevices.enumerateDevices();
+            const cameras = devs.filter((d) => d.kind === "videoinput");
+            
+            // Add new cameras that we haven't seen before
+            cameras.forEach(cam => {
+              if (cam.deviceId && cam.deviceId !== "" && !seenDeviceIds.has(cam.deviceId)) {
+                seenDeviceIds.add(cam.deviceId);
+                allCameras.push(cam);
+              }
+            });
+            
+            // Wait a bit before next attempt (USB devices may appear with delay)
+            if (attempt < 2) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+          } catch (err) {
+            console.warn(`Enumeration attempt ${attempt + 1} failed:`, err);
+          }
+        }
+        
+        console.log(`[CameraSettingModal] Found ${allCameras.length} camera(s) after ${3} attempts:`, 
+          allCameras.map(cam => ({
+            deviceId: cam.deviceId.substring(0, 20) + "...",
+            label: cam.label || "Unnamed camera",
+            isUSB: (cam.label || "").toLowerCase().includes("uvc") || 
+                   (cam.label || "").toLowerCase().includes("usb") || 
+                   (cam.label || "").toLowerCase().includes("nyk")
+          }))
+        );
+        
+        setDevices(allCameras);
+        
+        // Log USB webcam detection status
+        const usbCameras = allCameras.filter(cam => {
+          const label = (cam.label || "").toLowerCase();
+          return label.includes("uvc") || label.includes("usb") || label.includes("nyk");
+        });
+        if (usbCameras.length > 0) {
+          console.log(`[CameraSettingModal] ✅ USB webcam(s) detected: ${usbCameras.map(c => c.label).join(", ")}`);
+        } else {
+          console.log("[CameraSettingModal] ⚠️ No USB webcam detected - only built-in camera found");
+        }
         
         // Load saved camera preference
         const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
         if (savedDeviceId === IP_CAMERA_ID) {
           // IP camera is saved
           setSelectedDeviceId(IP_CAMERA_ID);
-        } else if (savedDeviceId && cameras.find(cam => cam.deviceId === savedDeviceId)) {
+        } else if (savedDeviceId && allCameras.find(cam => cam.deviceId === savedDeviceId)) {
           setSelectedDeviceId(savedDeviceId);
-        } else if (cameras.length > 0) {
-          setSelectedDeviceId(cameras[0].deviceId);
+        } else if (allCameras.length > 0) {
+          // Prefer USB webcam if available
+          const usbWebcam = allCameras.find(cam => {
+            const label = (cam.label || "").toLowerCase();
+            return label.includes("uvc") || label.includes("usb") || label.includes("nyk");
+          });
+          setSelectedDeviceId(usbWebcam ? usbWebcam.deviceId : allCameras[0].deviceId);
         } else {
           // If no cameras found, default to IP camera
           setSelectedDeviceId(IP_CAMERA_ID);
@@ -167,7 +219,7 @@ export default function CameraSettingModal({ open, onClose }) {
           className="border w-full p-2 rounded mb-4"
         >
           {/* IP Camera option */}
-          <option value={IP_CAMERA_ID}>IP Camera (localhost:8080)</option>
+          <option value={IP_CAMERA_ID}>IP Camera (localhost:1024)</option>
           {/* Regular cameras */}
           {devices.map((cam, i) => {
             const label = cam.label || `Camera ${i + 1}`;
