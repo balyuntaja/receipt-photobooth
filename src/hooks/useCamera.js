@@ -1,202 +1,166 @@
-import { useEffect, useRef, useState } from "react";
-import { requestCameraAccess, reinitializeCamera, stopCameraStream, isIPCamera, IP_CAMERA_URL } from "@/lib/camera";
+import { useRef, useState, useCallback } from "react";
+import { 
+  startCameraStream, 
+  stopCameraStream, 
+  isIPCamera, 
+  IP_CAMERA_URL,
+  isAndroid 
+} from "@/lib/camera";
 
 /**
- * Custom hook for managing camera stream
- * Optimized for Android low-end devices (Itel VistaTab 11)
+ * Camera hook - Android-first design
+ * 
+ * IMPORTANT: Camera must be started via user gesture (button click)
+ * Auto-start on mount is disabled for Android compatibility
+ * 
+ * @param {string} deviceId - Optional deviceId (DESKTOP ONLY, ignored on Android)
+ * @returns {Object} Camera state and controls
  */
-export function useCamera(cameraFacingMode = "user") {
+export function useCamera(deviceId = null) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
-  const startCamera = async (isRetry = false) => {
+  /**
+   * Start camera - MUST be called from user gesture (button click)
+   * 
+   * On Android:
+   * - Uses facingMode (browser auto-selects camera)
+   * - Avoids deviceId constraints (causes OverconstrainedError)
+   * 
+   * On Desktop:
+   * - Can use deviceId if provided
+   * - Falls back to browser default
+   */
+  const startCamera = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      if (isRetry) {
-        console.log(`Retry attempt ${retryCount + 1}...`);
-        setRetryCount(prev => prev + 1);
-      }
 
-      const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
-      
-      // Check if IP camera is selected
+      const savedDeviceId = deviceId || localStorage.getItem("photobooth_selectedCameraId");
+
+      // IP Camera handling (completely separate from MediaDevices)
       if (isIPCamera(savedDeviceId)) {
-        console.log("Using IP Camera:", IP_CAMERA_URL);
-        if (videoRef.current) {
-          videoRef.current.src = IP_CAMERA_URL;
-          videoRef.current.srcObject = null; // Clear srcObject when using src
-          videoRef.current.load();
-          
-          // Wait for video to load
-          await new Promise((resolve, reject) => {
-            if (!videoRef.current) {
-              reject(new Error("Video element not available"));
-              return;
-            }
-            
-            const handleLoadedData = () => {
-              videoRef.current?.removeEventListener("loadeddata", handleLoadedData);
-              videoRef.current?.removeEventListener("error", handleError);
-              resolve();
-            };
-            
-            const handleError = (e) => {
-              videoRef.current?.removeEventListener("loadeddata", handleLoadedData);
-              videoRef.current?.removeEventListener("error", handleError);
-              reject(new Error(`Failed to load IP camera: ${e.message || "Unknown error"}`));
-            };
-            
-            videoRef.current.addEventListener("loadeddata", handleLoadedData);
-            videoRef.current.addEventListener("error", handleError);
-            
-            // Timeout after 5 seconds
-            setTimeout(() => {
-              videoRef.current?.removeEventListener("loadeddata", handleLoadedData);
-              videoRef.current?.removeEventListener("error", handleError);
-              reject(new Error("IP camera connection timeout"));
-            }, 5000);
-          });
+        console.log("[useCamera] Starting IP Camera:", IP_CAMERA_URL);
+        if (!videoRef.current) {
+          throw new Error("Video element not available");
         }
-        
-        console.log("IP Camera started successfully");
+
+        videoRef.current.src = IP_CAMERA_URL;
+        videoRef.current.srcObject = null;
+        videoRef.current.load();
+
+        // Wait for IP camera to load
+        await new Promise((resolve, reject) => {
+          if (!videoRef.current) {
+            reject(new Error("Video element not available"));
+            return;
+          }
+
+          const handleLoadedData = () => {
+            cleanup();
+            resolve();
+          };
+
+          const handleError = (e) => {
+            cleanup();
+            reject(new Error(`IP camera failed: ${e.message || "Unknown error"}`));
+          };
+
+          const cleanup = () => {
+            if (videoRef.current) {
+              videoRef.current.removeEventListener("loadeddata", handleLoadedData);
+              videoRef.current.removeEventListener("error", handleError);
+            }
+          };
+
+          videoRef.current.addEventListener("loadeddata", handleLoadedData);
+          videoRef.current.addEventListener("error", handleError);
+
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            cleanup();
+            reject(new Error("IP camera connection timeout"));
+          }, 5000);
+        });
+
+        console.log("[useCamera] ✅ IP Camera started");
+        setIsActive(true);
         setIsLoading(false);
-        setRetryCount(0);
         return;
       }
 
-      // Use the improved camera access function for regular cameras
-      const stream = await requestCameraAccess();
-      
+      // Regular camera (MediaDevices API)
+      console.log("[useCamera] Starting camera stream...");
+      const stream = await startCameraStream(savedDeviceId);
+
       if (!stream) {
         throw new Error("Failed to get camera stream");
       }
 
       streamRef.current = stream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.src = ""; // Clear src when using srcObject
+        
         // Explicitly call play() for Android Chrome compatibility
-        videoRef.current.play().catch(err => {
-          console.warn("Video play() failed:", err);
-        });
+        await videoRef.current.play();
+        console.log("[useCamera] ✅ Camera started and playing");
       }
-      
-      console.log("Camera started successfully");
+
+      setIsActive(true);
       setIsLoading(false);
-      setRetryCount(0); // Reset retry count on success
     } catch (err) {
-      console.error("Camera access error:", err.name, err.message);
+      console.error("[useCamera] Camera error:", err.name, err.message);
       
-      // Provide detailed error messages
+      // User-friendly error messages
       let errorMessage = "Tidak dapat mengakses kamera.";
       
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        errorMessage = "Akses kamera ditolak.\n\n" +
-          "Silakan:\n" +
-          "1. Berikan izin kamera di pengaturan browser\n" +
-          "2. Refresh halaman\n" +
-          "3. Atau klik tombol 'Coba Lagi' di bawah";
-        console.error("Permission denied - user needs to grant camera permission");
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        errorMessage = "Kamera tidak ditemukan.\n\n" +
-          "Pastikan:\n" +
-          "1. Kamera terhubung dan berfungsi\n" +
-          "2. Tidak digunakan aplikasi lain\n" +
-          "3. Coba buka aplikasi kamera dulu, lalu kembali ke browser\n" +
-          "4. Klik 'Coba Lagi' setelah membuka aplikasi kamera";
-        console.error("No camera found - may need to open camera app first");
-      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-        errorMessage = "Kamera sedang digunakan.\n\n" +
-          "Kamera sedang digunakan aplikasi lain atau terjadi masalah pada driver kamera.\n\n" +
-          "Solusi:\n" +
-          "1. Tutup aplikasi lain yang menggunakan kamera\n" +
-          "2. Restart browser\n" +
-          "3. Klik 'Coba Lagi'";
-        console.error("Camera in use or driver error");
-      } else if (err.name === "OverconstrainedError" || err.name === "ConstraintNotSatisfiedError") {
-        errorMessage = "Kamera tidak mendukung mode yang diminta.\n\n" +
-          "Mencoba fallback ke mode lain...\n" +
-          "Klik 'Coba Lagi' untuk mencoba lagi.";
-        console.error("OverconstrainedError - constraints not satisfied");
-      } else if (err.name === "NotSupportedError") {
-        errorMessage = "Browser tidak mendukung akses kamera.\n\n" +
-          "Gunakan browser modern:\n" +
-          "- Chrome (disarankan)\n" +
-          "- Firefox\n" +
-          "- Safari\n" +
-          "- Edge";
-        console.error("Browser not supported");
-      } else if (err.name === "SecurityError") {
-        errorMessage = "Akses kamera diblokir.\n\n" +
-          "Pastikan menggunakan:\n" +
-          "- HTTPS (untuk production)\n" +
-          "- localhost (untuk development)";
-        console.error("Security error - need HTTPS or localhost");
-      } else {
-        errorMessage = "Tidak dapat mengakses kamera.\n\n" +
-          "Pastikan:\n" +
-          "1. Kamera terhubung dan berfungsi\n" +
-          "2. Permission kamera sudah diberikan\n" +
-          "3. Kamera tidak digunakan aplikasi lain\n" +
-          "4. Menggunakan HTTPS atau localhost\n" +
-          "5. Coba buka aplikasi kamera dulu, lalu kembali ke browser\n\n" +
-          "Klik 'Coba Lagi' untuk mencoba lagi.";
-        console.error("Unknown error:", err);
+        errorMessage = "Akses kamera ditolak.\n\nSilakan berikan izin kamera di pengaturan browser.";
+      } else if (err.name === "NotFoundError") {
+        errorMessage = "Kamera tidak ditemukan.\n\nPastikan kamera terhubung dan tidak digunakan aplikasi lain.";
+      } else if (err.name === "NotReadableError") {
+        errorMessage = "Kamera sedang digunakan.\n\nTutup aplikasi lain yang menggunakan kamera.";
+      } else if (err.name === "OverconstrainedError") {
+        errorMessage = "Kamera tidak mendukung mode yang diminta.\n\nMencoba mode lain...";
+        // Auto-retry with minimal constraints
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+          }
+          streamRef.current = stream;
+          setIsActive(true);
+          setIsLoading(false);
+          return;
+        } catch (retryErr) {
+          errorMessage = "Tidak dapat mengakses kamera dengan mode apapun.";
+        }
       }
       
       setError(errorMessage);
       setIsLoading(false);
+      setIsActive(false);
     }
-  };
+  }, [deviceId]);
 
-  const retryCamera = async () => {
-    console.log("Retrying camera access...");
-    const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
-    
-    // For IP camera, just restart
-    if (isIPCamera(savedDeviceId)) {
-      await startCamera(true);
-      return;
-    }
-    
-    // Use reinitialize function for retry
-    try {
-      const stream = await reinitializeCamera();
-      if (stream) {
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.src = ""; // Clear src when using srcObject
-          // Explicitly call play() for Android Chrome compatibility
-          videoRef.current.play().catch(err => {
-            console.warn("Video play() failed:", err);
-          });
-        }
-        console.log("Camera reinitialized successfully");
-        setError(null);
-        setIsLoading(false);
-        setRetryCount(0);
-      } else {
-        // If reinitialize returns null, try normal start
-        await startCamera(true);
-      }
-    } catch (err) {
-      console.error("Retry failed:", err);
-      await startCamera(true);
-    }
-  };
-
-  const stopCamera = () => {
+  /**
+   * Stop camera and cleanup
+   */
+  const stopCamera = useCallback(() => {
     if (streamRef.current) {
       stopCameraStream(streamRef.current);
       streamRef.current = null;
     }
-    // Also stop IP camera if active
+
     if (videoRef.current) {
       const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
       if (isIPCamera(savedDeviceId)) {
@@ -206,21 +170,27 @@ export function useCamera(cameraFacingMode = "user") {
         videoRef.current.srcObject = null;
       }
     }
-  };
 
-  useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraFacingMode]);
+    setIsActive(false);
+    console.log("[useCamera] Camera stopped");
+  }, []);
+
+  /**
+   * Retry camera (for error recovery)
+   */
+  const retryCamera = useCallback(async () => {
+    stopCamera();
+    await new Promise(resolve => setTimeout(resolve, 300)); // Brief delay
+    await startCamera();
+  }, [startCamera, stopCamera]);
 
   return {
     videoRef,
     error,
     isLoading,
-    startCamera,
+    isActive,
+    startCamera, // Must be called from user gesture
     stopCamera,
     retryCamera,
-    retryCount,
   };
 }

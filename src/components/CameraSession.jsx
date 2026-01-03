@@ -33,7 +33,8 @@ export default function CameraSession() {
   const template = templates.find((t) => t.id === templateId);
 
   // Custom hooks
-  const { videoRef, error, startCamera, stopCamera, isLoading, retryCamera } = useCamera(cameraFacingMode);
+  // Note: useCamera no longer auto-starts - must be triggered by user gesture
+  const { videoRef, error, startCamera, stopCamera, isLoading, isActive, retryCamera } = useCamera();
   const { canvasRef, capturePhoto: capturePhotoFromVideo } = usePhotoCapture();
   const { countdown, startCountdown } = useCountdown(delay);
 
@@ -149,8 +150,21 @@ export default function CameraSession() {
     }
   }, [templateId, navigate]);
 
+  // === Start Camera Handler (User Gesture Required) ===
+  const handleStartCamera = async () => {
+    if (!isActive && !isLoading) {
+      await startCamera();
+    }
+  };
+
   // === Start Auto Capture Handler ===
   const handleStart = () => {
+    // Ensure camera is active before starting capture
+    if (!isActive) {
+      handleStartCamera();
+      return;
+    }
+
     if (!isLoading && !error && videoRef.current && !hasStarted) {
       setHasStarted(true);
       setIsCapturing(true);
@@ -386,8 +400,19 @@ export default function CameraSession() {
             />
             <CountdownOverlay countdown={countdown} />
             
-            {/* Start Overlay - Only on video preview */}
-            {!hasStarted && !isLoading && !error && (
+            {/* Camera Start / Capture Start Overlay */}
+            {!isActive && !isLoading && !error && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-lg z-40 bg-black/50">
+                <Button
+                  onClick={handleStartCamera}
+                  className="px-12 py-6 text-xl font-semibold"
+                  size="lg"
+                >
+                  Start Camera
+                </Button>
+              </div>
+            )}
+            {isActive && !hasStarted && !isLoading && !error && (
               <div className="absolute inset-0 flex items-center justify-center rounded-lg z-40">
                 <Button
                   onClick={handleStart}

@@ -1,10 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { connectPrinter, isPrinterConnected as checkPrinterConnected } from "@/lib/printer";
 import { Button } from "@/components/ui/Button";
+import { enumerateCameras, isAndroid, isIPCamera, IP_CAMERA_ID, IP_CAMERA_URL } from "@/lib/camera";
 
-// IP Camera identifier
-const IP_CAMERA_ID = "ip-camera-localhost-1024";
-const IP_CAMERA_URL = "http://localhost:1024";
+// IP Camera constants imported from camera.ts
 
 export default function CameraSettingModal({ open, onClose }) {
   const [devices, setDevices] = useState([]);
@@ -13,111 +12,45 @@ export default function CameraSettingModal({ open, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Detect available cameras
-  // On Android, we need to request permission first to unlock device labels
-  // USB webcams may need multiple enumeration attempts to be detected
+  // Detect available cameras (DESKTOP ONLY - Android enumeration is unreliable)
   useEffect(() => {
     if (!open) return;
 
-    const enumerateCameras = async () => {
+    const loadCameras = async () => {
+      // On Android, skip enumeration - camera selection uses facingMode
+      if (isAndroid()) {
+        console.log("[CameraSettingModal] Android detected - skipping enumeration");
+        setDevices([]);
+        const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
+        // On Android, default to "android-default" (uses facingMode) unless IP camera is selected
+        setSelectedDeviceId(savedDeviceId === IP_CAMERA_ID ? IP_CAMERA_ID : "android-default");
+        return;
+      }
+
+      // Desktop: enumerate cameras for selection
       try {
-        // Step 1: Request permission first (required for Android to return deviceId with labels)
-        const permissionStream = await navigator.mediaDevices.getUserMedia({ 
-          video: true,
-          audio: false 
-        });
-        // Stop the stream immediately - we just needed permission
-        permissionStream.getTracks().forEach(track => track.stop());
-        
-        // Step 2: Wait longer for permission to propagate (Android quirk - USB devices need more time)
-        // Increased delay to 500ms to ensure USB webcam is detected
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Step 3: Enumerate devices multiple times (Android sometimes needs retry for USB devices)
-        let allCameras = [];
-        const seenDeviceIds = new Set();
-        
-        // Try enumerating 3 times with delays to catch USB webcams that appear later
-        for (let attempt = 0; attempt < 3; attempt++) {
-          try {
-            const devs = await navigator.mediaDevices.enumerateDevices();
-            const cameras = devs.filter((d) => d.kind === "videoinput");
-            
-            // Add new cameras that we haven't seen before
-            cameras.forEach(cam => {
-              if (cam.deviceId && cam.deviceId !== "" && !seenDeviceIds.has(cam.deviceId)) {
-                seenDeviceIds.add(cam.deviceId);
-                allCameras.push(cam);
-              }
-            });
-            
-            // Wait a bit before next attempt (USB devices may appear with delay)
-            if (attempt < 2) {
-              await new Promise(resolve => setTimeout(resolve, 200));
-            }
-          } catch (err) {
-            console.warn(`Enumeration attempt ${attempt + 1} failed:`, err);
-          }
-        }
-        
-        console.log(`[CameraSettingModal] Found ${allCameras.length} camera(s) after ${3} attempts:`, 
-          allCameras.map(cam => ({
-            deviceId: cam.deviceId.substring(0, 20) + "...",
-            label: cam.label || "Unnamed camera",
-            isUSB: (cam.label || "").toLowerCase().includes("uvc") || 
-                   (cam.label || "").toLowerCase().includes("usb") || 
-                   (cam.label || "").toLowerCase().includes("nyk")
-          }))
-        );
-        
-        setDevices(allCameras);
-        
-        // Log USB webcam detection status
-        const usbCameras = allCameras.filter(cam => {
-          const label = (cam.label || "").toLowerCase();
-          return label.includes("uvc") || label.includes("usb") || label.includes("nyk");
-        });
-        if (usbCameras.length > 0) {
-          console.log(`[CameraSettingModal] ✅ USB webcam(s) detected: ${usbCameras.map(c => c.label).join(", ")}`);
-        } else {
-          console.log("[CameraSettingModal] ⚠️ No USB webcam detected - only built-in camera found");
-        }
+        const cameras = await enumerateCameras();
+        setDevices(cameras);
         
         // Load saved camera preference
         const savedDeviceId = localStorage.getItem("photobooth_selectedCameraId");
         if (savedDeviceId === IP_CAMERA_ID) {
-          // IP camera is saved
           setSelectedDeviceId(IP_CAMERA_ID);
-        } else if (savedDeviceId && allCameras.find(cam => cam.deviceId === savedDeviceId)) {
+        } else if (savedDeviceId && cameras.find(cam => cam.deviceId === savedDeviceId)) {
           setSelectedDeviceId(savedDeviceId);
-        } else if (allCameras.length > 0) {
-          // Prefer USB webcam if available
-          const usbWebcam = allCameras.find(cam => {
-            const label = (cam.label || "").toLowerCase();
-            return label.includes("uvc") || label.includes("usb") || label.includes("nyk");
-          });
-          setSelectedDeviceId(usbWebcam ? usbWebcam.deviceId : allCameras[0].deviceId);
+        } else if (cameras.length > 0) {
+          setSelectedDeviceId(cameras[0].deviceId);
         } else {
-          // If no cameras found, default to IP camera
           setSelectedDeviceId(IP_CAMERA_ID);
         }
       } catch (error) {
-        console.error("Error enumerating cameras:", error);
-        // Fallback: try enumerate without permission (may not have labels)
-        try {
-          const devs = await navigator.mediaDevices.enumerateDevices();
-          const cameras = devs.filter((d) => d.kind === "videoinput");
-          setDevices(cameras);
-          if (cameras.length > 0) {
-            setSelectedDeviceId(cameras[0].deviceId);
-          }
-        } catch (fallbackError) {
-          console.error("Fallback enumeration also failed:", fallbackError);
-        }
+        console.error("[CameraSettingModal] Error loading cameras:", error);
+        setDevices([]);
+        setSelectedDeviceId(IP_CAMERA_ID);
       }
     };
 
-    enumerateCameras();
+    loadCameras();
   }, [open]);
 
   // Start camera preview when device changes
@@ -136,30 +69,47 @@ export default function CameraSettingModal({ open, onClose }) {
     }
 
     // Check if IP camera is selected
-    if (selectedDeviceId === IP_CAMERA_ID) {
-      // Use IP camera stream
+    if (isIPCamera(selectedDeviceId)) {
+      // IP camera: use <video src> (NOT getUserMedia)
       if (videoRef.current) {
         videoRef.current.src = IP_CAMERA_URL;
+        videoRef.current.srcObject = null;
         videoRef.current.load();
       }
     } else {
-      // Use regular camera via getUserMedia
+      // Regular camera: use getUserMedia
+      // On Android, use facingMode (ignore deviceId); on Desktop, use deviceId if available
+      const constraints = isAndroid() || selectedDeviceId === "android-default"
+        ? {
+            video: {
+              facingMode: "environment",
+              aspectRatio: 3 / 4
+            },
+            audio: false
+          }
+        : {
+            video: {
+              deviceId: selectedDeviceId ? { ideal: selectedDeviceId } : true,
+              aspectRatio: 3 / 4
+            },
+            audio: false
+          };
+
       navigator.mediaDevices
-        .getUserMedia({
-          video: { deviceId: { exact: selectedDeviceId } },
-        })
+        .getUserMedia(constraints)
         .then((stream) => {
           streamRef.current = stream;
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            videoRef.current.src = ""; // Clear src when using srcObject
-            // Explicitly call play() for Android Chrome compatibility
+            videoRef.current.src = "";
             videoRef.current.play().catch(err => {
-              console.warn("Video play() failed:", err);
+              console.warn("[CameraSettingModal] Video play() failed:", err);
             });
           }
         })
-        .catch((err) => console.error(err));
+        .catch((err) => {
+          console.error("[CameraSettingModal] Camera preview failed:", err);
+        });
     }
 
     return () => {
@@ -213,26 +163,27 @@ export default function CameraSettingModal({ open, onClose }) {
           onChange={(e) => {
             const newDeviceId = e.target.value;
             setSelectedDeviceId(newDeviceId);
-            // Save to localStorage
-            localStorage.setItem("photobooth_selectedCameraId", newDeviceId);
+            // Save to localStorage (except Android default which uses facingMode)
+            if (newDeviceId !== "android-default") {
+              localStorage.setItem("photobooth_selectedCameraId", newDeviceId);
+            } else {
+              localStorage.removeItem("photobooth_selectedCameraId");
+            }
           }}
           className="border w-full p-2 rounded mb-4"
         >
           {/* IP Camera option */}
           <option value={IP_CAMERA_ID}>IP Camera (localhost:1024)</option>
-          {/* Regular cameras */}
-          {devices.map((cam, i) => {
-            const label = cam.label || `Camera ${i + 1}`;
-            const isUSB = label.toLowerCase().includes("uvc") || 
-                         label.toLowerCase().includes("usb") || 
-                         label.toLowerCase().includes("nyk");
-            const displayLabel = isUSB ? `🔌 ${label}` : label;
-            return (
+          {/* Regular cameras (Desktop only - Android uses facingMode) */}
+          {isAndroid() ? (
+            <option value="android-default">Android Camera (Auto - facingMode)</option>
+          ) : (
+            devices.map((cam, i) => (
               <option key={cam.deviceId} value={cam.deviceId}>
-                {displayLabel}
+                {cam.label || `Camera ${i + 1}`}
               </option>
-            );
-          })}
+            ))
+          )}
         </select>
         {/* Video Preview */}
         <video ref={videoRef} autoPlay playsInline muted className="w-full rounded mb-4" />
